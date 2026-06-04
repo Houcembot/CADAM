@@ -2,6 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { pickOpenRouterKey, reportOpenRouterFailure, poolStatus } from './openrouterPool';
+import { pickModel, reportModelFailure, poolStatus as modelPoolStatus } from './modelPool';
 import { checkAndIncrementQuota, QuotaExceededError } from './clic3dQuota';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
@@ -964,7 +965,15 @@ export async function handleAiChatRequest(req: Request) {
   // `creative` conversations this is hardcoded to Sonnet regardless of
   // what the client picked — billing has to price the model that ran,
   // not the one the user requested.
-  const actualModelId = chatModel(conversation, rawBody.model);
+  let actualModelId = chatModel(conversation, rawBody.model);
+  // clic3d-cadam: if the requested model is in the free pool, rotate to
+  // an available one to dodge per-model rate limits (1 OpenRouter key,
+  // 10 free models in round-robin).
+  if (actualModelId.endsWith(':free') || actualModelId === 'openrouter/free') {
+    const picked = pickModel({ needsVision: true, needsTools: true });
+    actualModelId = picked.id;
+    console.log(`[clic3d-cadam] pool routed → ${picked.id} (${picked.label})`);
+  }
   const resolvedProvider = providerFor(actualModelId);
 
   let chatLanguageModel: LanguageModel;
@@ -1065,7 +1074,7 @@ export async function handleAiChatRequest(req: Request) {
     // useless for debugging. Log here and pass through a short message
     // to the client so the failure is visible in the UI too.
     onError: (error) => {
-      logError(error, {
+      reportModelFailure(actualModelId, error); logError(error, {
         functionName: 'ai-chat',
         statusCode: 500,
         userId: logContext.userId,

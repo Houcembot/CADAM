@@ -29,8 +29,11 @@ let pool: KeyEntry[] | null = null;
 let rotation = 0;
 
 function buildPool(): KeyEntry[] {
+  // clic3d-cadam: single OpenRouter key (1 account suffices because we
+  // rotate across 10 free MODELS instead — see modelPool.ts).
+  // Optional OPENROUTER_API_KEY_2..4 still supported for resilience if needed.
   const keys: string[] = [];
-  for (let i = 1; i <= 10; i++) {
+  for (let i = 1; i <= 4; i++) {
     const name = i === 1 ? 'OPENROUTER_API_KEY' : `OPENROUTER_API_KEY_${i}`;
     const v = process.env[name];
     if (v && v.length > 10) keys.push(v);
