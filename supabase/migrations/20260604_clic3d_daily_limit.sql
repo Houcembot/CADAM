@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.cadam_daily_usage (
 ALTER TABLE public.cadam_daily_usage ENABLE ROW LEVEL SECURITY;
 
 -- Users can read their own usage row (for showing remaining quota in UI).
+DROP POLICY IF EXISTS "user can read own usage" ON public.cadam_daily_usage;
 CREATE POLICY "user can read own usage"
   ON public.cadam_daily_usage
   FOR SELECT
