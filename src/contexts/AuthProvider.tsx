@@ -6,6 +6,7 @@ import { useNavigate } from '@tanstack/react-router';
 import posthog from 'posthog-js';
 import { AuthContext, type BillingStatus, getLevel } from './AuthContext';
 import { apiJson } from '@/services/api';
+import { useClic3dSSO } from '@/clic3d/useClic3dSSO';
 import { z } from 'zod';
 
 const LOCAL_BILLING_STATUS: BillingStatus = {
@@ -68,36 +69,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const posthogSent = useRef(false);
   const queryClient = useQueryClient();
 
-  // Initialize auth state and set up session listener
+  const ssoStatus = useClic3dSSO();
+
+  // Initialize auth state and set up session listener after SSO bridge is ready
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.refreshSession();
-        setSession(session);
-        localStorage.setItem('session', JSON.stringify(session));
-        setUser(session?.user ?? null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
+    if (ssoStatus !== 'ready') {
+      if (ssoStatus === 'pending') setIsLoading(true);
+      else setIsLoading(false);
+      return;
+    }
+    setIsLoading(false);
+    // Mirror Supabase auth state into local React state.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      localStorage.setItem('session', JSON.stringify(session));
+    });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      localStorage.setItem('session', JSON.stringify(session));
       setUser(session?.user ?? null);
+      localStorage.setItem('session', JSON.stringify(session));
       if (event === 'PASSWORD_RECOVERY') {
         navigate({ to: '/update-password' });
       }
     });
-
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [ssoStatus, navigate]);
 
   // Poll adam-billing for subscription state + token balances. 30s cadence
   // matches the prior user_extradata poll — adam-billing is the source of
@@ -263,6 +262,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
   };
+
+  if (ssoStatus === 'error') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-adam-bg-secondary-dark p-8 text-center">
+        <p className="text-adam-text-secondary">
+          Service de génération temporairement indisponible.
+          <br />
+          Recharge la page ou réessaie dans quelques minutes.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider
