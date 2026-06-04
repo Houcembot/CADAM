@@ -5,6 +5,8 @@ const PARENT_ORIGIN =
   (import.meta.env.VITE_CLIC3D_PARENT_ORIGIN as string | undefined) ??
   'https://clic3d.tn';
 
+const PARENT_TIMEOUT_MS = 5000;
+
 export type SSOStatus = 'pending' | 'ready' | 'error';
 
 export function useClic3dSSO(): SSOStatus {
@@ -12,6 +14,7 @@ export function useClic3dSSO(): SSOStatus {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function bridgeSession() {
       try {
@@ -23,7 +26,7 @@ export function useClic3dSSO(): SSOStatus {
           return;
         }
 
-        const tokenResp = await requestTokenFromParent();
+        const tokenResp = await requestTokenFromParent(controller.signal);
         if (cancelled) return;
 
         const { error } = await supabase.auth.verifyOtp({
@@ -33,14 +36,21 @@ export function useClic3dSSO(): SSOStatus {
         if (error) throw error;
         if (!cancelled) setStatus('ready');
       } catch (e) {
+        if (
+          cancelled ||
+          (e instanceof DOMException && e.name === 'AbortError')
+        ) {
+          return;
+        }
         console.error('[clic3d-cadam] SSO bridge failed:', e);
-        if (!cancelled) setStatus('error');
+        setStatus('error');
       }
     }
 
     bridgeSession();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, []);
 
@@ -52,24 +62,41 @@ interface TokenResponse {
   email: string;
 }
 
-function requestTokenFromParent(): Promise<TokenResponse> {
+function requestTokenFromParent(signal: AbortSignal): Promise<TokenResponse> {
   return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('aborted', 'AbortError'));
+      return;
+    }
+
     const id = crypto.randomUUID();
-    const timeout = setTimeout(() => {
+
+    function cleanup() {
+      clearTimeout(timeout);
       window.removeEventListener('message', handler);
+      signal.removeEventListener('abort', onAbort);
+    }
+
+    function onAbort() {
+      cleanup();
+      reject(new DOMException('aborted', 'AbortError'));
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup();
       reject(new Error('parent timeout (5s)'));
-    }, 5000);
+    }, PARENT_TIMEOUT_MS);
 
     function handler(e: MessageEvent) {
       if (e.origin !== PARENT_ORIGIN) return;
       if (e.data?.type !== 'clic3d-cadam-token' || e.data?.id !== id) return;
-      clearTimeout(timeout);
-      window.removeEventListener('message', handler);
+      cleanup();
       if (e.data.error) reject(new Error(e.data.error));
       else resolve({ token_hash: e.data.token_hash, email: e.data.email });
     }
 
     window.addEventListener('message', handler);
+    signal.addEventListener('abort', onAbort);
     window.parent.postMessage(
       { type: 'clic3d-cadam-token-request', id },
       PARENT_ORIGIN,
