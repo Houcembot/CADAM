@@ -75,26 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session },
         } = await supabase.auth.refreshSession();
-        // clic3d-cadam: auto sign-in anonymously when no session exists.
-        // Removes the login wall — clic3d.tn visitors land directly in the
-        // generator. Quota (10/day) is still enforced server-side via the
-        // anonymous user_id (lives in browser localStorage cookies).
-        if (!session) {
-          const { data: anonData, error: anonErr } = await supabase.auth.signInAnonymously();
-          if (anonErr) {
-            console.warn('[clic3d-cadam] anonymous sign-in failed:', anonErr.message);
-            setSession(null);
-            setUser(null);
-          } else {
-            setSession(anonData.session);
-            localStorage.setItem('session', JSON.stringify(anonData.session));
-            setUser(anonData.user ?? null);
-          }
-        } else {
-          setSession(session);
-          localStorage.setItem('session', JSON.stringify(session));
-          setUser(session?.user ?? null);
-        }
+        setSession(session);
+        localStorage.setItem('session', JSON.stringify(session));
+        setUser(session?.user ?? null);
       } finally {
         setIsLoading(false);
       }
