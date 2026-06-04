@@ -1,6 +1,8 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { pickOpenRouterKey, reportOpenRouterFailure, poolStatus } from './openrouterPool';
+import { checkAndIncrementQuota, QuotaExceededError } from './clic3dQuota';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
 import { imageIdFromFilename, imageStoragePath } from '@shared/imageRefs';
@@ -45,6 +47,12 @@ const MODEL_PRICES: Record<
   string,
   { input: number; output: number; cacheRead?: number; cacheWrite?: number }
 > = {
+  // clic3d-cadam: FREE OpenRouter models — $0 cost across the board
+  'google/gemma-4-31b-it:free': { input: 0, output: 0 },
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { input: 0, output: 0 },
+  'moonshotai/kimi-k2.6:free': { input: 0, output: 0 },
+  'openrouter/free': { input: 0, output: 0 },
+
   // Anthropic
   'anthropic/claude-opus-4.8': { input: 5, output: 25 },
   'anthropic/claude-opus-4': { input: 15, output: 75 },
@@ -270,8 +278,9 @@ const THINKING_BUDGET_TOKENS = 9000;
 type ChatProvider = 'anthropic' | 'google' | 'openrouter';
 
 function providerFor(modelId: string): ChatProvider {
-  if (modelId.startsWith('anthropic/')) return 'anthropic';
-  if (modelId.startsWith('google/')) return 'google';
+  // clic3d-cadam patch: route ALL providers through OpenRouter
+  // (our local Anthropic + Google keys may not have access to the
+  // bleeding-edge model variants CADAM exposes — OpenRouter does).
   return 'openrouter';
 }
 
@@ -302,8 +311,10 @@ function createChatProviders(): ChatProviders {
       return google;
     },
     openrouter: () => {
-      openrouter ??= createOpenRouter({
-        apiKey: requiredEnv('OPENROUTER_API_KEY'),
+      // Always pick a fresh key from the pool (key rotation across requests).
+      // The factory is called per-request, so the rotation logic auto-balances.
+      openrouter = createOpenRouter({
+        apiKey: pickOpenRouterKey(),
       });
       return openrouter;
     },
@@ -323,47 +334,9 @@ function buildChatModel(
   providers: ChatProviders,
   thinking: boolean,
 ): { model: LanguageModel; providerOptions?: ProviderOptions } {
-  if (modelId.startsWith('anthropic/')) {
-    // Anthropic's API uses dashes everywhere ("claude-haiku-4-5"), while the
-    // OpenRouter alias uses dots ("claude-haiku-4.5"). Normalize both.
-    const id = modelId.slice('anthropic/'.length).replace(/\./g, '-');
-    return {
-      model: providers.anthropic()(id),
-      providerOptions: thinking
-        ? {
-            anthropic: {
-              thinking: {
-                type: 'enabled',
-                budgetTokens: THINKING_BUDGET_TOKENS,
-              },
-            },
-          }
-        : undefined,
-    };
-  }
-
-  if (modelId.startsWith('google/')) {
-    const id = modelId.slice('google/'.length);
-    return {
-      model: providers.google()(id),
-      // Gemini 3 Pro (and most current Google reasoning models) always
-      // think internally — `thinkingBudget` only controls how MUCH, not
-      // whether. `includeThoughts` is what actually surfaces those
-      // thoughts in the stream as `reasoning-delta` parts. So we always
-      // ask for thoughts; the user's "thinking" toggle just bumps the
-      // budget. Without this, Google streams look as if the model isn't
-      // reasoning at all even though it is.
-      providerOptions: {
-        google: {
-          thinkingConfig: {
-            includeThoughts: true,
-            ...(thinking ? { thinkingBudget: THINKING_BUDGET_TOKENS } : {}),
-          },
-        },
-      },
-    };
-  }
-
+  // clic3d-cadam: ALL models go through OpenRouter — we don't maintain
+  // direct Anthropic/Google API keys. OpenRouter accepts the same model
+  // IDs CADAM uses (e.g. "anthropic/claude-opus-4.8", "google/gemini-3.1-pro-preview").
   return {
     model: providers.openrouter().chat(modelId, {
       ...(thinking
@@ -548,7 +521,7 @@ async function generateConversationTitle({
   const text = getParametricText(firstMessage.parts) || 'New conversation';
   try {
     const result = await generateText({
-      model: anthropic('claude-haiku-4-5'),
+      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat('anthropic/claude-haiku-4.5'),
       system:
         'Generate a short title for a 3D creation conversation. Return only the title.',
       prompt: text,
@@ -593,7 +566,7 @@ async function generateConversationSuggestions({
   const summary = `User request: ${firstUserText.slice(0, 400)}\n\nMost recent assistant reply: ${lastAssistantText.slice(0, 400)}`;
   try {
     const result = await generateText({
-      model: anthropic('claude-haiku-4-5'),
+      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat('anthropic/claude-haiku-4.5'),
       system:
         conversationType === 'creative'
           ? 'Given a 3D mesh design conversation, return an array of exactly 2 follow-up prompts the user might want to send next. Each prompt is a concise instruction of 3 words or fewer, not a question. Return exactly 2 items — no more, no fewer.'
@@ -601,7 +574,7 @@ async function generateConversationSuggestions({
       prompt: summary,
       output: Output.object({
         schema: z.object({
-          suggestions: z.array(z.string().min(1).max(80)).length(2),
+          suggestions: z.array(z.string().min(1).max(80)),  // Anthropic rejects all array constraints — post-process normalizes to 2
         }),
       }),
     });
@@ -830,33 +803,32 @@ export async function handleAiChatRequest(req: Request) {
     );
   }
 
-  // Pre-flight balance gate. A chat costs at least 1 billing token, so a
-  // total of 0 means we cannot let the stream start. We don't try to
-  // estimate the exact cost up front — chat is variable, and the billing
-  // service drains the remainder to zero if the actual usage exceeds
-  // what's left (see onFinish below).
+  // clic3d-cadam: daily quota gate (free service, default 10 gens/jour/user).
+  // We bypass the upstream billing service (not configured for clic3d).
   try {
-    const status = await billing.getStatus(user.email);
-    if (status.tokens.total <= 0) {
+    const quota = await checkAndIncrementQuota(user.id, supabaseClient);
+    console.log(`[clic3d-quota] user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
       return jsonResponse(
         {
-          error: 'insufficient_tokens',
-          code: 'insufficient_tokens',
-          tokensRequired: 1,
-          tokensAvailable: 0,
+          error: 'daily_limit_reached',
+          code: 'daily_limit_reached',
+          message: error.message,
+          count: error.count,
+          limit: error.limit,
         },
-        402,
+        429,
       );
     }
-  } catch (error) {
     logError(error, {
       functionName: 'ai-chat',
-      statusCode: error instanceof BillingClientError ? error.status : 502,
+      statusCode: 500,
       userId: user.id,
       conversationId: conversation.id,
-      additionalContext: { operation: 'billing_preflight' },
+      additionalContext: { operation: 'clic3d_quota_check' },
     });
-    return jsonResponse({ error: 'Billing service unavailable' }, 503);
+    return jsonResponse({ error: 'Quota service unavailable' }, 503);
   }
 
   const tools =

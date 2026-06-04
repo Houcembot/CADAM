@@ -236,42 +236,43 @@ export function getInitials(fullName: string | null) {
 }
 
 export const PARAMETRIC_MODELS: ModelConfig[] = [
+  // clic3d-cadam: ALL models below are FREE on OpenRouter — service free for all
+  // clic3d.tn visitors. CADAM is GPL-3.0; we keep that open-source policy.
   {
-    id: 'google/gemini-3.1-pro-preview',
-    name: 'Gemini 3.1 Pro',
-    description: 'Latest Google model with excellent multi-modal capabilities',
+    id: 'google/gemma-4-31b-it:free',
+    name: 'Gemma 4 31B (free)',
+    description: 'Google Gemma 4 with vision — 262K context, balanced CAD',
     provider: 'Google',
     supportsTools: true,
-    supportsThinking: true,
+    supportsThinking: false,
     supportsVision: true,
   },
   {
-    id: 'anthropic/claude-opus-4.8',
-    name: 'Claude Opus 4.8',
-    description: 'Most powerful Anthropic model for complex reasoning',
-    provider: 'Anthropic',
+    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    name: 'Nemotron Omni (free)',
+    description: 'NVIDIA multi-modal reasoning — image+text input, 256K context',
+    provider: 'NVIDIA',
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,
   },
   {
-    id: 'openai/gpt-5.5',
-    name: 'GPT-5.5',
-    description: 'Latest OpenAI model for reliable CAD generation',
-    provider: 'OpenAI',
+    id: 'moonshotai/kimi-k2.6:free',
+    name: 'Kimi K2.6 (free)',
+    description: 'Moonshot Kimi 262K context — fast iterative generation',
+    provider: 'Moonshot',
     supportsTools: true,
-    supportsThinking: true,
-    supportsVision: true,
+    supportsThinking: false,
+    supportsVision: false,
   },
   {
-    id: 'google/gemini-3.5-flash',
-    name: 'Gemini 3.5 Flash',
-    description:
-      'High-efficiency Google multimodal model with fast coding and reasoning',
-    provider: 'Google',
+    id: 'openrouter/free',
+    name: 'Auto (free)',
+    description: 'OpenRouter auto-routes to best-available free model',
+    provider: 'OpenRouter',
     supportsTools: true,
-    supportsThinking: true,
-    supportsVision: true,
+    supportsThinking: false,
+    supportsVision: false,
   },
 ];
 
