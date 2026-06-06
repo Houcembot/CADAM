@@ -41,6 +41,12 @@ const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
     supportsVision: true,
     supportsTools: true,
   },
+  {
+    id: 'google-direct/gemini-2.5-pro:free',
+    label: 'Gemini 2.5 Pro',
+    supportsVision: true,
+    supportsTools: true,
+  },
   // Vision-capable (CADAM sends scene screenshots)
   {
     id: 'google/gemma-4-31b-it:free',

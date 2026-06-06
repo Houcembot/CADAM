@@ -52,6 +52,7 @@ const MODEL_PRICES: Record<
   // clic3d-cadam: FREE Google AI Studio direct models — $0 cost on free tier
   'google-direct/gemini-2.5-flash-lite:free': { input: 0, output: 0 },
   'google-direct/gemini-2.5-flash:free': { input: 0, output: 0 },
+  'google-direct/gemini-2.5-pro:free': { input: 0, output: 0 },
 
   // clic3d-cadam: FREE OpenRouter models — $0 cost across the board
   'google/gemma-4-31b-it:free': { input: 0, output: 0 },
@@ -1061,6 +1062,7 @@ export async function handleAiChatRequest(req: Request) {
     system: systemPrompt(conversation),
     messages: modelMessages,
     tools,
+    maxRetries: 0,
     prepareStep: ({ stepNumber }) =>
       conversation.type === 'parametric' &&
       leafRole === 'user' &&
