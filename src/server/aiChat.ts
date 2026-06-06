@@ -4,7 +4,11 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { pickOpenRouterKey, reportOpenRouterFailure } from './openrouterPool';
 import { pickGoogleApiKey, reportGoogleFailure } from './googlePool';
 import { pickModel, reportModelFailure } from './modelPool';
-import { checkAndIncrementQuota, QuotaExceededError } from './clic3dQuota';
+import {
+  assertQuotaAvailable,
+  incrementQuota,
+  QuotaExceededError,
+} from './clic3dQuota';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
 import { imageIdFromFilename, imageStoragePath } from '@shared/imageRefs';
@@ -844,10 +848,12 @@ export async function handleAiChatRequest(req: Request) {
 
   // clic3d-cadam: daily quota gate (free service, default 10 gens/jour/user).
   // We bypass the upstream billing service (not configured for clic3d).
+  // Pre-call is read-only — the actual +1 lives in streamText.onFinish so
+  // that rate-limited or errored generations don't burn the user's cap.
   try {
-    const quota = await checkAndIncrementQuota(user.id, supabaseClient);
+    const quota = await assertQuotaAvailable(user.id, supabaseClient);
     console.log(
-      `[clic3d-quota] user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`,
+      `[clic3d-quota] precheck user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`,
     );
   } catch (error) {
     if (error instanceof QuotaExceededError) {
@@ -1196,6 +1202,44 @@ export async function handleAiChatRequest(req: Request) {
             const finalizedParts = finalizeStreamingParts(
               responseMessage.parts,
             );
+
+            // clic3d-cadam: only +1 the daily quota when the stream
+            // actually produced something. `onFinish` normally fires
+            // only on success (errors take the `onError` path), but
+            // we gate on real content as a belt-and-braces check so a
+            // zero-output finish (e.g. provider returned empty) doesn't
+            // burn a generation. DB errors here are logged but never
+            // bubble — quota bookkeeping must not break the response.
+            const producedOutput = finalizedParts.some((part) => {
+              if (part.type === 'text' || part.type === 'reasoning') {
+                const text = (part as { text?: string }).text;
+                return typeof text === 'string' && text.trim().length > 0;
+              }
+              if (part.type.startsWith('tool-')) {
+                const state = (part as { state?: string }).state;
+                // input-available = still awaiting client tool output;
+                // anything else means the tool round-trip ran.
+                return state !== 'input-available';
+              }
+              return false;
+            });
+            if (producedOutput) {
+              try {
+                const quota = await incrementQuota(user.id, supabaseClient);
+                console.log(
+                  `[clic3d-quota] success user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`,
+                );
+              } catch (quotaErr) {
+                logError(quotaErr, {
+                  functionName: 'ai-chat',
+                  statusCode: 500,
+                  userId: user.id,
+                  conversationId: conversation.id,
+                  additionalContext: { operation: 'clic3d_quota_increment' },
+                });
+              }
+            }
+
             const serializedMessage = {
               metadata: JSON.parse(JSON.stringify(metadata)),
               parts: JSON.parse(JSON.stringify(finalizedParts)),

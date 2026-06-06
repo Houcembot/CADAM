@@ -2,8 +2,11 @@
  * clic3d-cadam: daily generation quota per user.
  *
  * - DAILY_LIMIT comes from env CLIC3D_DAILY_LIMIT (default 10).
- * - Before each AI generation, call `checkAndIncrementQuota(userId, supabase)`.
- * - Throws QuotaExceededError when the user is over the daily cap.
+ * - Pre-call (before LLM): `assertQuotaAvailable(userId, supabase)` — read-only
+ *   check; throws QuotaExceededError when the user is at the cap. Does NOT
+ *   increment, so failed/errored generations do not burn the user's quota.
+ * - Post-call (in streamText.onFinish, only on success): `incrementQuota(
+ *   userId, supabase)` — atomic +1 via the increment_cadam_daily_usage RPC.
  *
  * Storage: public.cadam_daily_usage table + increment_cadam_daily_usage RPC.
  */
@@ -14,20 +17,27 @@ export class QuotaExceededError extends Error {
   count: number;
   limit: number;
   constructor(count: number, limit: number) {
-    super(`Daily generation limit reached (${count}/${limit}). Reset tomorrow at 00:00 UTC.`);
+    super(
+      `Daily generation limit reached (${count}/${limit}). Reset tomorrow at 00:00 UTC.`,
+    );
     this.name = 'QuotaExceededError';
     this.count = count;
     this.limit = limit;
   }
 }
 
-const DAILY_LIMIT = Number(process.env.CLIC3D_DAILY_LIMIT ?? 10);
+export const DAILY_LIMIT = Number(process.env.CLIC3D_DAILY_LIMIT ?? 10);
 
-export async function checkAndIncrementQuota(
+/**
+ * Read-only pre-call gate. Throws QuotaExceededError when the user has
+ * already hit DAILY_LIMIT for today (UTC). Does NOT mutate state — pair
+ * with `incrementQuota` on the success path so failed generations don't
+ * count against the cap.
+ */
+export async function assertQuotaAvailable(
   userId: string,
   supabase: SupabaseClient,
 ): Promise<{ count: number; limit: number; remaining: number }> {
-  // 1. Check current count
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('cadam_daily_usage')
@@ -40,16 +50,48 @@ export async function checkAndIncrementQuota(
   if (current >= DAILY_LIMIT) {
     throw new QuotaExceededError(current, DAILY_LIMIT);
   }
+  return {
+    count: current,
+    limit: DAILY_LIMIT,
+    remaining: Math.max(0, DAILY_LIMIT - current),
+  };
+}
 
-  // 2. Atomically increment
-  const { data: newCount, error: rpcError } = await supabase.rpc(
+/**
+ * Post-call increment. Call only from the success path (e.g.
+ * streamText.onFinish) so failed generations don't consume the cap.
+ * Returns the new count after increment.
+ */
+export async function incrementQuota(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<{ count: number; limit: number; remaining: number }> {
+  const { data: newCount, error } = await supabase.rpc(
     'increment_cadam_daily_usage',
     { uid: userId },
   );
-  if (rpcError) throw rpcError;
+  if (error) throw error;
+  const count = (newCount as number) ?? 0;
+  return {
+    count,
+    limit: DAILY_LIMIT,
+    remaining: Math.max(0, DAILY_LIMIT - count),
+  };
+}
 
-  const count = (newCount as number) ?? current + 1;
-  return { count, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - count) };
+/**
+ * @deprecated Use `assertQuotaAvailable` (pre-call) +
+ * `incrementQuota` (post-success) instead. This combined helper still
+ * burns the quota even when the downstream LLM call fails. Kept as a
+ * thin wrapper so any straggler caller keeps compiling during the
+ * transition.
+ */
+export async function checkAndIncrementQuota(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<{ count: number; limit: number; remaining: number }> {
+  await assertQuotaAvailable(userId, supabase);
+  return incrementQuota(userId, supabase);
 }
 
 export async function getRemaining(
@@ -64,5 +106,9 @@ export async function getRemaining(
     .eq('date', today)
     .maybeSingle();
   const count = data?.generation_count ?? 0;
-  return { count, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - count) };
+  return {
+    count,
+    limit: DAILY_LIMIT,
+    remaining: Math.max(0, DAILY_LIMIT - count),
+  };
 }
