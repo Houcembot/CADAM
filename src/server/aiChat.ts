@@ -54,9 +54,7 @@ const MODEL_PRICES: Record<
 
   // clic3d-cadam: FREE OpenRouter models — $0 cost across the board
   'google/gemma-4-31b-it:free': { input: 0, output: 0 },
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { input: 0, output: 0 },
   'moonshotai/kimi-k2.6:free': { input: 0, output: 0 },
-  'openrouter/free': { input: 0, output: 0 },
 
   // Anthropic
   'anthropic/claude-opus-4.8': { input: 5, output: 25 },

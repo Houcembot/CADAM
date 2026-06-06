@@ -60,24 +60,6 @@ const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
     supportsVision: true,
     supportsTools: true,
   },
-  {
-    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-    label: 'Nemotron Omni',
-    supportsVision: true,
-    supportsTools: true,
-  },
-  {
-    id: 'nvidia/nemotron-nano-12b-v2-vl:free',
-    label: 'Nemotron Nano VL',
-    supportsVision: true,
-    supportsTools: true,
-  },
-  {
-    id: 'openrouter/free',
-    label: 'OpenRouter Auto',
-    supportsVision: true,
-    supportsTools: true,
-  },
   // Text-only fallbacks (used only when caller signals needsVision=false)
   {
     id: 'nvidia/nemotron-3-super-120b-a12b:free',
