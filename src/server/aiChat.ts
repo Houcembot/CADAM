@@ -2,6 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { pickOpenRouterKey, reportOpenRouterFailure } from './openrouterPool';
+import { pickGoogleApiKey, reportGoogleFailure } from './googlePool';
 import { pickModel, reportModelFailure } from './modelPool';
 import { checkAndIncrementQuota, QuotaExceededError } from './clic3dQuota';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
@@ -300,13 +301,16 @@ type ChatProviders = {
   // onError handler can report the failure back to the pool for cool-off.
   // Undefined until the openrouter factory has been called at least once.
   getLastOpenrouterKey: () => string | undefined;
+  // Same idea for Google: each .google() call picks a fresh key from the
+  // pool, and the onError handler needs to know which one to cool down.
+  getLastGoogleKey: () => string | undefined;
 };
 
 function createChatProviders(): ChatProviders {
   let anthropic: AnthropicProvider | undefined;
-  let google: GoogleProvider | undefined;
   let openrouter: ReturnType<typeof createOpenRouter> | undefined;
   let lastOpenrouterKey: string | undefined;
+  let lastGoogleKey: string | undefined;
   return {
     anthropic: () => {
       anthropic ??= createAnthropic({
@@ -315,10 +319,15 @@ function createChatProviders(): ChatProviders {
       return anthropic;
     },
     google: () => {
-      google ??= createGoogleGenerativeAI({
-        apiKey: requiredEnv('GOOGLE_API_KEY'),
-      });
-      return google;
+      // Always pick a fresh key from the pool (round-robin across keys).
+      // NB: do NOT cache — each call picks a fresh key from rotation so
+      // a long-lived providers object still spreads load across keys.
+      const key = pickGoogleApiKey();
+      if (!key) {
+        throw new Error('GOOGLE_API_KEY is not set');
+      }
+      lastGoogleKey = key;
+      return createGoogleGenerativeAI({ apiKey: key });
     },
     openrouter: () => {
       // Always pick a fresh key from the pool (key rotation across requests).
@@ -332,6 +341,7 @@ function createChatProviders(): ChatProviders {
       return openrouter;
     },
     getLastOpenrouterKey: () => lastOpenrouterKey,
+    getLastGoogleKey: () => lastGoogleKey,
   };
 }
 
@@ -1112,6 +1122,11 @@ export async function handleAiChatRequest(req: Request) {
       const usedOpenrouterKey = providers.getLastOpenrouterKey();
       if (usedOpenrouterKey) {
         reportOpenRouterFailure(usedOpenrouterKey, error);
+      }
+      // Same cool-off path for Google direct (google-direct/* model IDs).
+      const usedGoogleKey = providers.getLastGoogleKey?.();
+      if (usedGoogleKey) {
+        reportGoogleFailure(usedGoogleKey, error);
       }
       logError(error, {
         functionName: 'ai-chat',
