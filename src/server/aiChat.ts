@@ -48,6 +48,10 @@ const MODEL_PRICES: Record<
   string,
   { input: number; output: number; cacheRead?: number; cacheWrite?: number }
 > = {
+  // clic3d-cadam: FREE Google AI Studio direct models — $0 cost on free tier
+  'google-direct/gemini-2.5-flash-lite:free': { input: 0, output: 0 },
+  'google-direct/gemini-2.5-flash:free': { input: 0, output: 0 },
+
   // clic3d-cadam: FREE OpenRouter models — $0 cost across the board
   'google/gemma-4-31b-it:free': { input: 0, output: 0 },
   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { input: 0, output: 0 },
@@ -278,10 +282,12 @@ const THINKING_BUDGET_TOKENS = 9000;
 
 type ChatProvider = 'anthropic' | 'google' | 'openrouter';
 
-function providerFor(_modelId: string): ChatProvider {
-  // clic3d-cadam patch: route ALL providers through OpenRouter
-  // (our local Anthropic + Google keys may not have access to the
-  // bleeding-edge model variants CADAM exposes — OpenRouter does).
+function providerFor(modelId: string): ChatProvider {
+  // clic3d-cadam: IDs prefixed `google-direct/` are routed to Google AI
+  // Studio directly (separate quota from OpenRouter — ~1000 req/day on
+  // Gemini Flash-Lite free tier). All other IDs (including OpenRouter-
+  // hosted `google/gemma-*:free`) keep going through OpenRouter.
+  if (modelId.startsWith('google-direct/')) return 'google';
   return 'openrouter';
 }
 
@@ -344,9 +350,19 @@ function buildChatModel(
   providers: ChatProviders,
   thinking: boolean,
 ): { model: LanguageModel; providerOptions?: ProviderOptions } {
-  // clic3d-cadam: ALL models go through OpenRouter — we don't maintain
-  // direct Anthropic/Google API keys. OpenRouter accepts the same model
-  // IDs CADAM uses (e.g. "anthropic/claude-opus-4.8", "google/gemini-3.1-pro-preview").
+  const provider = providerFor(modelId);
+  if (provider === 'google') {
+    // `google-direct/gemini-2.5-flash-lite:free` → `gemini-2.5-flash-lite`
+    const bareId = modelId
+      .replace(/^google-direct\//, '')
+      .replace(/:free$/, '');
+    return {
+      model: providers.google().chat(bareId),
+    };
+  }
+  // Everything else goes through OpenRouter. OpenRouter accepts the same
+  // model IDs CADAM uses (e.g. "anthropic/claude-opus-4.8",
+  // "google/gemini-3.1-pro-preview", "google/gemma-4-31b-it:free").
   return {
     model: providers.openrouter().chat(modelId, {
       ...(thinking

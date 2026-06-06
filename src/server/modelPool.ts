@@ -28,18 +28,81 @@ type ModelEntry = {
 // 10 free OpenRouter models — order = preference. We try them
 // in round-robin starting from `rotation`.
 const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
+  // Google AI Studio direct (separate quota from OpenRouter — tried first)
+  {
+    id: 'google-direct/gemini-2.5-flash-lite:free',
+    label: 'Gemini 2.5 Flash-Lite',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'google-direct/gemini-2.5-flash:free',
+    label: 'Gemini 2.5 Flash',
+    supportsVision: true,
+    supportsTools: true,
+  },
   // Vision-capable (CADAM sends scene screenshots)
-  { id: 'google/gemma-4-31b-it:free',                            label: 'Gemma 4 31B',          supportsVision: true,  supportsTools: true },
-  { id: 'moonshotai/kimi-k2.6:free',                              label: 'Kimi K2.6',            supportsVision: true,  supportsTools: true },
-  { id: 'google/gemma-4-26b-a4b-it:free',                         label: 'Gemma 4 26B',          supportsVision: true,  supportsTools: true },
-  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',     label: 'Nemotron Omni',        supportsVision: true,  supportsTools: true },
-  { id: 'nvidia/nemotron-nano-12b-v2-vl:free',                    label: 'Nemotron Nano VL',     supportsVision: true,  supportsTools: true },
-  { id: 'openrouter/free',                                        label: 'OpenRouter Auto',      supportsVision: true,  supportsTools: true },
+  {
+    id: 'google/gemma-4-31b-it:free',
+    label: 'Gemma 4 31B',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'moonshotai/kimi-k2.6:free',
+    label: 'Kimi K2.6',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'google/gemma-4-26b-a4b-it:free',
+    label: 'Gemma 4 26B',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    label: 'Nemotron Omni',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'nvidia/nemotron-nano-12b-v2-vl:free',
+    label: 'Nemotron Nano VL',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'openrouter/free',
+    label: 'OpenRouter Auto',
+    supportsVision: true,
+    supportsTools: true,
+  },
   // Text-only fallbacks (used only when caller signals needsVision=false)
-  { id: 'nvidia/nemotron-3-super-120b-a12b:free',                 label: 'Nemotron 120B',        supportsVision: false, supportsTools: true },
-  { id: 'openai/gpt-oss-120b:free',                               label: 'GPT-OSS 120B',         supportsVision: false, supportsTools: true },
-  { id: 'meta-llama/llama-3.3-70b-instruct:free',                 label: 'Llama 3.3 70B',        supportsVision: false, supportsTools: true },
-  { id: 'qwen/qwen3-coder:free',                                  label: 'Qwen3 Coder',          supportsVision: false, supportsTools: true },
+  {
+    id: 'nvidia/nemotron-3-super-120b-a12b:free',
+    label: 'Nemotron 120B',
+    supportsVision: false,
+    supportsTools: true,
+  },
+  {
+    id: 'openai/gpt-oss-120b:free',
+    label: 'GPT-OSS 120B',
+    supportsVision: false,
+    supportsTools: true,
+  },
+  {
+    id: 'meta-llama/llama-3.3-70b-instruct:free',
+    label: 'Llama 3.3 70B',
+    supportsVision: false,
+    supportsTools: true,
+  },
+  {
+    id: 'qwen/qwen3-coder:free',
+    label: 'Qwen3 Coder',
+    supportsVision: false,
+    supportsTools: true,
+  },
 ];
 
 const COOLOFF_MS = 5 * 60 * 1000;
@@ -53,7 +116,9 @@ function ensurePool(): ModelEntry[] {
   return pool;
 }
 
-export function pickModel(opts: { needsVision?: boolean; needsTools?: boolean } = {}): {
+export function pickModel(
+  opts: { needsVision?: boolean; needsTools?: boolean } = {},
+): {
   id: string;
   label: string;
 } {
@@ -87,7 +152,10 @@ export function reportModelFailure(modelId: string, err: unknown): void {
   const entry = p.find((m) => m.id === modelId);
   if (!entry) return;
   const msg = err instanceof Error ? err.message : String(err);
-  const isCooloffSignal = /429|rate.?limit|quota|insufficient|exhausted|rate-limited upstream|temporarily/i.test(msg);
+  const isCooloffSignal =
+    /429|rate.?limit|quota|insufficient|exhausted|rate-limited upstream|temporarily/i.test(
+      msg,
+    );
   if (isCooloffSignal) {
     entry.cooledUntil = Date.now() + COOLOFF_MS;
     entry.lastError = msg.slice(0, 200);
