@@ -78,7 +78,12 @@ const DEV_TOKENS = {
   total: 3_000_000,
 };
 
-const isBypassed = () => env('ENVIRONMENT') === 'local';
+// Bypass upstream billing service when:
+//  - local dev (ENVIRONMENT=local), OR
+//  - BILLING_SERVICE_URL is not configured (clic3d fork case — quota is enforced
+//    via cadam_daily_usage table in clic3dQuota.ts, not via Adam's billing service).
+const isBypassed = () =>
+  env('ENVIRONMENT') === 'local' || !env('BILLING_SERVICE_URL');
 
 const devStatus = (): BillingStatus => ({
   user: { hasTrialed: false },
