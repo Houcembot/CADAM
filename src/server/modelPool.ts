@@ -139,6 +139,11 @@ export function reportModelFailure(modelId: string, err: unknown): void {
   const p = ensurePool();
   const entry = p.find((m) => m.id === modelId);
   if (!entry) return;
+  // Google-direct models are backed by the multi-key googlePool — when one key
+  // is rate-limited, googlePool cools that key but the model itself can still
+  // be served by another key on the next request. Cooling the model here would
+  // defeat the whole point of multi-key rotation, so skip it.
+  if (modelId.startsWith('google-direct/')) return;
   const msg = err instanceof Error ? err.message : String(err);
   const isCooloffSignal =
     /429|rate.?limit|quota|insufficient|exhausted|rate-limited upstream|temporarily/i.test(
