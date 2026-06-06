@@ -1,8 +1,8 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { pickOpenRouterKey, reportOpenRouterFailure, poolStatus } from './openrouterPool';
-import { pickModel, reportModelFailure, poolStatus as modelPoolStatus } from './modelPool';
+import { pickOpenRouterKey, reportOpenRouterFailure } from './openrouterPool';
+import { pickModel, reportModelFailure } from './modelPool';
 import { checkAndIncrementQuota, QuotaExceededError } from './clic3dQuota';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
@@ -278,7 +278,7 @@ const THINKING_BUDGET_TOKENS = 9000;
 
 type ChatProvider = 'anthropic' | 'google' | 'openrouter';
 
-function providerFor(modelId: string): ChatProvider {
+function providerFor(_modelId: string): ChatProvider {
   // clic3d-cadam patch: route ALL providers through OpenRouter
   // (our local Anthropic + Google keys may not have access to the
   // bleeding-edge model variants CADAM exposes — OpenRouter does).
@@ -292,12 +292,17 @@ type ChatProviders = {
   anthropic: () => AnthropicProvider;
   google: () => GoogleProvider;
   openrouter: () => ReturnType<typeof createOpenRouter>;
+  // Last OpenRouter key handed out by the factory, captured so the streaming
+  // onError handler can report the failure back to the pool for cool-off.
+  // Undefined until the openrouter factory has been called at least once.
+  getLastOpenrouterKey: () => string | undefined;
 };
 
 function createChatProviders(): ChatProviders {
   let anthropic: AnthropicProvider | undefined;
   let google: GoogleProvider | undefined;
   let openrouter: ReturnType<typeof createOpenRouter> | undefined;
+  let lastOpenrouterKey: string | undefined;
   return {
     anthropic: () => {
       anthropic ??= createAnthropic({
@@ -314,11 +319,15 @@ function createChatProviders(): ChatProviders {
     openrouter: () => {
       // Always pick a fresh key from the pool (key rotation across requests).
       // The factory is called per-request, so the rotation logic auto-balances.
+      // Capture the key locally so reportOpenRouterFailure() can cool it off
+      // when streamText's onError fires downstream.
+      lastOpenrouterKey = pickOpenRouterKey();
       openrouter = createOpenRouter({
-        apiKey: pickOpenRouterKey(),
+        apiKey: lastOpenrouterKey,
       });
       return openrouter;
     },
+    getLastOpenrouterKey: () => lastOpenrouterKey,
   };
 }
 
@@ -513,7 +522,7 @@ async function loadBranchFromDb({
 }
 
 async function generateConversationTitle({
-  anthropic,
+  anthropic: _anthropic,
   firstMessage,
 }: {
   anthropic: AnthropicProvider;
@@ -522,7 +531,9 @@ async function generateConversationTitle({
   const text = getParametricText(firstMessage.parts) || 'New conversation';
   try {
     const result = await generateText({
-      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat('anthropic/claude-haiku-4.5'),
+      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat(
+        'anthropic/claude-haiku-4.5',
+      ),
       system:
         'Generate a short title for a 3D creation conversation. Return only the title.',
       prompt: text,
@@ -545,7 +556,7 @@ async function generateConversationTitle({
  * specific assistant turn.
  */
 async function generateConversationSuggestions({
-  anthropic,
+  anthropic: _anthropic,
   branch,
   conversationType,
 }: {
@@ -567,7 +578,9 @@ async function generateConversationSuggestions({
   const summary = `User request: ${firstUserText.slice(0, 400)}\n\nMost recent assistant reply: ${lastAssistantText.slice(0, 400)}`;
   try {
     const result = await generateText({
-      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat('anthropic/claude-haiku-4.5'),
+      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat(
+        'anthropic/claude-haiku-4.5',
+      ),
       system:
         conversationType === 'creative'
           ? 'Given a 3D mesh design conversation, return an array of exactly 2 follow-up prompts the user might want to send next. Each prompt is a concise instruction of 3 words or fewer, not a question. Return exactly 2 items — no more, no fewer.'
@@ -575,7 +588,7 @@ async function generateConversationSuggestions({
       prompt: summary,
       output: Output.object({
         schema: z.object({
-          suggestions: z.array(z.string().min(1).max(80)),  // Anthropic rejects all array constraints — post-process normalizes to 2
+          suggestions: z.array(z.string().min(1).max(80)), // Anthropic rejects all array constraints — post-process normalizes to 2
         }),
       }),
     });
@@ -808,7 +821,9 @@ export async function handleAiChatRequest(req: Request) {
   // We bypass the upstream billing service (not configured for clic3d).
   try {
     const quota = await checkAndIncrementQuota(user.id, supabaseClient);
-    console.log(`[clic3d-quota] user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`);
+    console.log(
+      `[clic3d-quota] user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`,
+    );
   } catch (error) {
     if (error instanceof QuotaExceededError) {
       return jsonResponse(
@@ -1074,7 +1089,17 @@ export async function handleAiChatRequest(req: Request) {
     // useless for debugging. Log here and pass through a short message
     // to the client so the failure is visible in the UI too.
     onError: (error) => {
-      reportModelFailure(actualModelId, error); logError(error, {
+      reportModelFailure(actualModelId, error);
+      // Cool off the OpenRouter key the chat stream actually used. Without
+      // this, the pool's round-robin would keep handing out a rate-limited
+      // key 1/N of the time until the process restarts. Only the streaming
+      // path is wired — title/suggestion utility calls (createOpenRouter
+      // inlined elsewhere) are intentionally silent on rate-limit failures.
+      const usedOpenrouterKey = providers.getLastOpenrouterKey();
+      if (usedOpenrouterKey) {
+        reportOpenRouterFailure(usedOpenrouterKey, error);
+      }
+      logError(error, {
         functionName: 'ai-chat',
         statusCode: 500,
         userId: logContext.userId,
