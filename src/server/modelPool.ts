@@ -116,15 +116,35 @@ export function pickModel(
     (opts.needsVision !== true || m.supportsVision) &&
     (opts.needsTools !== true || m.supportsTools);
 
-  // Try round-robin starting from `rotation`, skipping cooled and non-eligible.
-  for (let i = 0; i < p.length; i++) {
-    const idx = (rotation + i) % p.length;
-    const m = p[idx];
+  // TIER 1 — google-direct/* (independent Google AI Studio quota, multi-key
+  // rotation in googlePool). Always tried first, in listed order, before any
+  // OpenRouter fallback. Per-key rate-limits are handled by googlePool so the
+  // models themselves don't carry cool-off here (see reportModelFailure
+  // early-return for google-direct/*). The `rotation` index only governs
+  // tier 2.
+  for (const m of p) {
+    if (!m.id.startsWith('google-direct/')) continue;
+    if (m.cooledUntil <= now && eligible(m)) {
+      return { id: m.id, label: m.label };
+    }
+  }
+
+  // TIER 2 — OpenRouter free models. Round-robin starting from `rotation`,
+  // skipping cooled and non-eligible. Only reached when all google-direct
+  // entries are cooled (rare — google-direct entries are not cooled by
+  // reportModelFailure, only by googlePool's per-key cool-off propagating
+  // back if every key in the pool is exhausted).
+  const tier2 = p
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => !m.id.startsWith('google-direct/'));
+  for (let i = 0; i < tier2.length; i++) {
+    const { m, idx } = tier2[(rotation + i) % tier2.length];
     if (m.cooledUntil <= now && eligible(m)) {
       rotation = (idx + 1) % p.length;
       return { id: m.id, label: m.label };
     }
   }
+
   // Everyone is cooled or none eligible — fall back to the eligible one
   // that cools off soonest.
   const fallback = p
