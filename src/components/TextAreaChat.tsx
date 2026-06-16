@@ -463,7 +463,7 @@ function TextAreaChat({
   onSubmit,
   onFocus,
   isLoading = false,
-  placeholder = 'What can Adam help you build today?',
+  placeholder = 'What can clic3d help you build today?',
   type,
   stopGenerating,
   disabled = false,

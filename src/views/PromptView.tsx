@@ -293,7 +293,7 @@ export function PromptView() {
                       return;
                     }
                   }}
-                  placeholder="Start building with Adam..."
+                  placeholder="Start building with clic3d..."
                   type={type}
                   disabled={limitReached || isGenerating}
                   model={model}

@@ -444,7 +444,7 @@ export function ChatSession({
       }
       const message = error instanceof Error ? error.message : String(error);
       toast({
-        title: 'Adam ran into a problem',
+        title: 'clic3d ran into a problem',
         description: message || 'The model call failed. Please try again.',
         variant: 'destructive',
       });
@@ -758,7 +758,7 @@ export function ChatSession({
         <TextAreaChat
           type={conversation.type}
           onSubmit={(parts) => void handleSend(parts)}
-          placeholder="Keep iterating with Adam..."
+          placeholder="Keep iterating with clic3d..."
           isLoading={isLoading}
           stopGenerating={stop}
           disabled={isDisabled}
