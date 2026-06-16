@@ -8,25 +8,27 @@
 
 ## 1. Objectif
 
-Monétiser le modèle **premium** (Gemini 3.1 Pro, qualité « vrai emporte-pièce ») via un
-système de **crédits** :
+Monétiser via un système de **crédits**. **Décision : le premium est la SEULE voie** — pas
+de tier Flash gratuit illimité.
 
-- les modèles **gratuits** (Gemini Flash / pool free) restent **illimités et gratuits** ;
-- les modèles **premium** consomment des crédits ;
-- chaque nouvel utilisateur reçoit un **stock de crédits offerts** ;
-- on recharge en achetant un **pack** payé en dinars (D17/Flouci).
+- Le modèle servi est **Gemini 3.1 Pro** (premium). Le pool gratuit (Flash/Flash-Lite) n'est
+  plus proposé à l'utilisateur.
+- **Toute génération coûte 20 crédits** (gating uniforme, pas de branche « gratuit »).
+- Chaque nouvel utilisateur reçoit **100 crédits offerts** (= 5 générations) pour essayer le
+  premium → bonne première impression, puis achat obligatoire.
+- On recharge en achetant un **pack** payé en dinars, **D17 en premier** (Flouci ensuite).
 
 ## 2. Décisions déjà actées (à ne pas rediscuter)
 
-| Élément                               | Valeur                                                        |
-| ------------------------------------- | ------------------------------------------------------------- |
-| Modèle premium                        | `google/gemini-3.1-pro-preview` (déjà défaut premium en prod) |
-| Coût d'une génération premium         | **20 crédits**                                                |
-| Crédits offerts au nouvel utilisateur | **100 crédits** (= 5 générations premium)                     |
-| Pack payant                           | **20 DT = 200 crédits** (= 10 générations premium)            |
-| Modèles gratuits                      | illimités, **0 crédit** (quota déjà à Infinity)               |
-| Coût réel mesuré                      | ~$0,10/génération premium (OpenRouter) → marge pack ~84 %     |
-| Paiement                              | D17 / Flouci (rails existants côté clic3dprint)               |
+| Élément                               | Valeur                                                           |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| Modèle premium                        | `google/gemini-3.1-pro-preview` (déjà défaut premium en prod)    |
+| Coût d'une génération premium         | **20 crédits**                                                   |
+| Crédits offerts au nouvel utilisateur | **100 crédits** (= 5 générations premium)                        |
+| Pack payant                           | **20 DT = 200 crédits** (= 10 générations premium)               |
+| Tier gratuit illimité                 | **aucun** — premium = seule voie (Flash retiré du sélecteur)     |
+| Coût réel mesuré                      | ~$0,10/génération premium (OpenRouter) → marge pack ~84 %        |
+| Paiement                              | **D17 en premier**, Flouci ensuite (rails existants clic3dprint) |
 
 > 1 crédit ≈ 0,10 DT de prix de vente. L'unité « crédit » est cosmétique (gros chiffres
 > marketing) ; la vraie unité de coût est la **génération premium** (~0,31 DT de coût).
@@ -83,18 +85,15 @@ déjà les utilisateurs, et clic3dprint y a un accès admin via `getSupabaseAdmi
 
 ## 5. Gating côté cadam (`src/server/aiChat.ts`)
 
-On garde la même structure que l'ancien quota (qui est maintenant désactivé) :
+On garde la même structure que l'ancien quota (qui est maintenant désactivé). **Premium =
+seule voie → TOUTE génération coûte 20 crédits** (pas de branche « gratuit ») :
 
-1. **Déterminer si la génération est premium** : `actualModelId` n'est PAS un `:free`
-   (après résolution du pool). Les modèles premium = ids non-`:free` (ex.
-   `google/gemini-3.1-pro-preview`, `anthropic/claude-sonnet-4.5`).
-2. **Pré-check** (avant l'appel LLM, read-only) : si premium et `balance < 20` →
+1. **Pré-check** (avant l'appel LLM, read-only) : si `balance < 20` →
    réponse `402` `{ error: 'insufficient_credits', balance, needed: 20 }`. Le client
    affiche « achète des crédits ».
-3. **Déduction** (dans `streamText.onFinish`, **succès uniquement**, gaté `!isContinuation`
+2. **Déduction** (dans `streamText.onFinish`, **succès uniquement**, gaté `!isContinuation`
    comme le compteur actuel) : `consume_credits(user, 20, 'premium_generation', message_id)`.
-   Les générations **gratuites** ne touchent pas aux crédits.
-4. **Échec/erreur** : pas de déduction (onError ≠ onFinish), donc une compilation ratée ou
+3. **Échec/erreur** : pas de déduction (onError ≠ onFinish), donc une compilation ratée ou
    un quota OpenRouter ne brûle pas de crédits.
 
 > Réutilise la logique `!isContinuation` déjà en place pour « 1 génération = 1 tour ».
@@ -111,9 +110,10 @@ Au premier login d'un utilisateur (création du profil), `grant_credits(uid, 100
 
 1. **Page pack** (`/credits` ou nouvelle `/credits/acheter`) : bouton « 200 crédits — 20 DT »,
    l'utilisateur connecté clique.
-2. **Init paiement** : `POST /api/payment/credits` crée un paiement D17/Flouci (réutilise le
-   pattern de `app/api/payment/route.js`), avec en métadonnée `{ user_id, pack: 'cr200' }`.
-3. **Callback / webhook** (`/api/payment/d17-callback` ou `flouci-callback`) :
+2. **Init paiement** : `POST /api/payment/credits` crée un paiement **D17** (Flouci en
+   phase ultérieure), en réutilisant le pattern de `app/api/payment/route.js` +
+   `d17-callback`, avec en métadonnée `{ user_id, pack: 'cr200' }`.
+3. **Callback / webhook** (`/api/payment/d17-callback`) :
    - **VÉRIFIE le paiement serveur-à-serveur** auprès de D17/Flouci (règle absolue clic3d :
      jamais créditer sans vérif serveur-à-serveur).
    - si payé → `getSupabaseAdmin().rpc('grant_credits', { uid, amount: 200, reason:
@@ -123,11 +123,14 @@ Au premier login d'un utilisateur (création du profil), `grant_credits(uid, 100
 
 ## 8. UI
 
-- **Affichage du solde** : « 🪙 200 crédits » dans l'app cadam (réutiliser/raccorder
-  `useBillingProducts`/le composant de solde existant à `cadam_credits` au lieu du service
-  billing externe bypassé).
-- **Message « crédits insuffisants »** : quand premium et `balance < 20`, CTA « Acheter des
-  crédits » → ouvre la page pack (postMessage parent depuis l'iframe, comme le SSO).
+- **Sélecteur de modèle premium-only** : `PARAMETRIC_MODELS` (src/lib/utils.ts) ne garde que
+  les modèles premium (Gemini 3.1 Pro par défaut) ; on **retire les entrées `:free`**
+  (Flash/Gemma/etc.). Le pool gratuit serveur (`modelPool`/override `:free`) devient du code
+  dormant — laissé en place mais plus déclenché par une sélection utilisateur.
+- **Affichage du solde** : « 🪙 200 crédits » dans l'app cadam (raccorder le composant de
+  solde existant à `cadam_credits` au lieu du service billing externe bypassé).
+- **Message « crédits insuffisants »** : quand `balance < 20`, CTA « Acheter des crédits »
+  → ouvre la page pack (postMessage parent depuis l'iframe, comme le SSO).
 - **Remplacer la copie obsolète** « Service gratuit, limite 10 générations/jour/compte »
   (clic3dprint `ModeToggle.js:156`) par la mention crédits.
 
@@ -147,19 +150,21 @@ Au premier login d'un utilisateur (création du profil), `grant_credits(uid, 100
 - Renommer le défaut de modèle affiché dans `PromptView` (cosmétique : affiche Gemma, exécute Flash).
 - Prompt caching (optimisation de marge).
 
-## 11. À confirmer avant l'implémentation
+## 11. Décisions (résolues)
 
-1. **Supabase partagé** : confirmer que `getSupabaseAdmin()` (clic3dprint) pointe bien sur le
-   projet cadam `vjhafkljcbzhbjkagcfo` (très probable — le SSO y crée les users).
-2. **D17 vs Flouci** : lequel en premier pour les packs (ou les deux) ?
-3. **Page d'achat** : sur clic3dprint (`/credits`) ou un modal dans l'iframe cadam ?
-4. **Garde-t-on Flash gratuit illimité** comme fallback après épuisement des crédits, ou
-   l'accès premium est-il la seule voie ?
+1. **Paiement** : ✅ **D17 en premier**, Flouci en phase ultérieure.
+2. **Accès** : ✅ **premium = seule voie** — pas de Flash gratuit illimité ; les 100 crédits
+   offerts servent à essayer, puis achat obligatoire.
+3. **Page d'achat** : sur **clic3dprint** (`/credits`), avec retour vers l'iframe.
+   _(recommandation — à confirmer à l'implémentation)_
+4. **Supabase partagé** : à vérifier en début d'implémentation que `getSupabaseAdmin()`
+   (clic3dprint) pointe sur le projet cadam `vjhafkljcbzhbjkagcfo` (très probable — le SSO y
+   crée les users). _(vérif technique, pas une décision produit)_
 
 ## 12. Tests
 
 - RPC `consume_credits` : refuse à 19 crédits, débite à 20, idempotent sur `ref`.
 - RPC `grant_credits` : idempotent sur `ref` (webhook rejoué = +0).
-- Gate aiChat : premium bloqué à <20 (402), gratuit jamais bloqué, déduction seulement au succès.
-- Webhook paiement : signature/vérif serveur-à-serveur, crédite une seule fois.
+- Gate aiChat : bloqué à <20 (402), déduction seulement au succès, pas de déduction sur erreur.
+- Webhook paiement : vérif serveur-à-serveur, crédite une seule fois.
 - Signup : 100 crédits une seule fois.
