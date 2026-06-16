@@ -123,9 +123,12 @@ $$;
 create or replace function public.grant_signup_credits()
 returns trigger language plpgsql security definer as $$
 begin
-  perform public.grant_credits(new.id, 100, 'signup_grant', new.id::text);
+  -- profiles.user_id = FK auth.users (profiles.id est une PK propre, PAS le user auth)
+  perform public.grant_credits(new.user_id, 100, 'signup_grant', new.user_id::text);
   return new;
 end $$;
+-- (la migration livrée ajoute aussi `user_id_by_email(p_email)` SECURITY DEFINER,
+--  service_role only — pour le mapping paiement, profiles n'ayant pas d'email)
 
 drop trigger if exists trg_grant_signup_credits on public.profiles;
 create trigger trg_grant_signup_credits
@@ -340,16 +343,14 @@ git commit -m "feat(credits): premium-only model selector (Gemini 3.1 Pro defaul
 // lib/cadam-credits.js — crédite le solde cadam après paiement vérifié.
 import { getSupabaseAdmin } from './supabase-admin';
 
-// Mappe l'email (identité clic3dprint) -> user_id Supabase cadam via la table profiles.
+// Mappe l'email (identité clic3dprint) -> user_id Supabase cadam.
+// NB: `profiles` n'a PAS de colonne email et `profiles.id` ≠ user auth → on passe
+// par le RPC `user_id_by_email` (lit auth.users, service_role only).
 async function cadamUserIdByEmail(email) {
   const sb = getSupabaseAdmin();
-  const { data, error } = await sb
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle();
+  const { data, error } = await sb.rpc('user_id_by_email', { p_email: email });
   if (error) throw error;
-  return data?.id || null;
+  return data || null;
 }
 
 // Crédite `amount` à l'utilisateur (idempotent via ref = orderId). Renvoie le nouveau solde ou null si user introuvable.
