@@ -239,13 +239,14 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
   // clic3d-cadam: ALL models below are FREE — service free for all clic3d.tn
   // visitors. CADAM is GPL-3.0; we keep that open-source policy.
   // NB: any `:free` id selected here is server-side routed by the free pool
-  // (see server/modelPool.ts pickModel), which currently pins the strongest
-  // free model — Gemini 2.5 Pro — for the parametric CAD path.
+  // (see server/modelPool.ts pickModel), which prefers Gemini 2.5 Flash for
+  // the parametric CAD path, with a real fallback chain to Flash-Lite then the
+  // OpenRouter free tier (Pro's free quota is too small to be the default).
   {
-    id: 'google-direct/gemini-2.5-pro:free',
-    name: 'Gemini 2.5 Pro (free)',
+    id: 'google-direct/gemini-2.5-flash:free',
+    name: 'Gemini 2.5 Flash (free)',
     description:
-      'Google Gemini 2.5 Pro — strongest free model for parametric CAD',
+      'Google Gemini 2.5 Flash — strong CAD quality, large free quota',
     provider: 'Google',
     supportsTools: true,
     supportsThinking: true,

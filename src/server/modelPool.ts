@@ -29,21 +29,19 @@ type ModelEntry = {
 // in round-robin starting from `rotation`.
 const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
   // Google AI Studio direct (separate quota from OpenRouter — tried first).
-  // Order matters: pickModel returns the FIRST eligible google-direct entry
-  // and reportModelFailure never cools google-direct/* (see line ~166), so
-  // index 0 here is effectively the fixed model for the parametric CAD path.
-  // Pro is first ON PURPOSE — writing correct parametric OpenSCAD (hollow
-  // blades, Bezier profiles, manifold geometry) needs the strongest free
-  // model; Flash-Lite/Flash produced degenerate blobs. Trade-off: Pro's free
-  // daily quota is much smaller than Flash-Lite's and there is NO automatic
-  // fallback to Flash here — if Pro's quota is exhausted across all Google
-  // keys, the request fails rather than silently dropping to a weaker model.
-  {
-    id: 'google-direct/gemini-2.5-pro:free',
-    label: 'Gemini 2.5 Pro',
-    supportsVision: true,
-    supportsTools: true,
-  },
+  // Order = preference chain. pickModel returns the first eligible entry, and
+  // reportModelFailure now cools an entry on a quota/429 signal, so the chain
+  // degrades for real: Flash → Flash-Lite → Pro → (OpenRouter tier below).
+  //
+  // Flash is index 0 ON PURPOSE: it's far stronger than Flash-Lite for
+  // writing real parametric OpenSCAD (hollow blades, Bezier profiles,
+  // manifold geometry — Flash-Lite produced degenerate blobs). Its exact
+  // free-tier RPD is unconfirmed but expected to be much larger than Pro's.
+  // Gemini 2.5 PRO was tried at index 0 first and instantly hit "quota
+  // exceeded" — its free quota is ~nil — so it sits last as a near-dead
+  // last-resort entry (one wasted try before the OpenRouter tier). Because
+  // the chain now has real fallback, Flash's exact quota is no longer a
+  // single point of failure.
   {
     id: 'google-direct/gemini-2.5-flash:free',
     label: 'Gemini 2.5 Flash',
@@ -53,6 +51,12 @@ const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
   {
     id: 'google-direct/gemini-2.5-flash-lite:free',
     label: 'Gemini 2.5 Flash-Lite',
+    supportsVision: true,
+    supportsTools: true,
+  },
+  {
+    id: 'google-direct/gemini-2.5-pro:free',
+    label: 'Gemini 2.5 Pro',
     supportsVision: true,
     supportsTools: true,
   },
@@ -168,11 +172,15 @@ export function reportModelFailure(modelId: string, err: unknown): void {
   const p = ensurePool();
   const entry = p.find((m) => m.id === modelId);
   if (!entry) return;
-  // Google-direct models are backed by the multi-key googlePool — when one key
-  // is rate-limited, googlePool cools that key but the model itself can still
-  // be served by another key on the next request. Cooling the model here would
-  // defeat the whole point of multi-key rotation, so skip it.
-  if (modelId.startsWith('google-direct/')) return;
+  // NB: google-direct/* entries ARE cooled here (previously skipped). The old
+  // skip assumed only per-KEY rate limits — true for transient 429s, which
+  // googlePool already handles by cooling the key. But when a model's whole
+  // free-tier quota is exhausted across every key (e.g. Gemini 2.5 Pro's tiny
+  // free quota), skipping the cool meant pickModel kept returning that same
+  // dead model forever → hard "quota exceeded" with no fallback. Cooling it
+  // for 5 min lets pickModel degrade to the next google-direct entry, then to
+  // the OpenRouter tier. Cost: a transient single-key 429 also benches the
+  // model for 5 min even if other keys are fine — acceptable, and self-heals.
   const msg = err instanceof Error ? err.message : String(err);
   const isCooloffSignal =
     /429|rate.?limit|quota|insufficient|exhausted|rate-limited upstream|temporarily/i.test(
