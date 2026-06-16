@@ -1,12 +1,18 @@
 /**
  * clic3d-cadam: daily generation quota per user.
  *
- * - DAILY_LIMIT comes from env CLIC3D_DAILY_LIMIT (default 50).
+ * - DAILY_LIMIT is currently UNLIMITED (Infinity) — the per-day cap was
+ *   removed 2026-06-16 at the owner's request. `assertQuotaAvailable`
+ *   therefore never throws. We deliberately ignore the CLIC3D_DAILY_LIMIT
+ *   env var so a stale value (e.g. an old `=10` set in Vercel) can't
+ *   silently re-impose a cap. To re-enable a cap, set DAILY_LIMIT back to
+ *   `Number(process.env.CLIC3D_DAILY_LIMIT ?? <n>)`.
  * - Pre-call (before LLM): `assertQuotaAvailable(userId, supabase)` — read-only
  *   check; throws QuotaExceededError when the user is at the cap. Does NOT
  *   increment, so failed/errored generations do not burn the user's quota.
  * - Post-call (in streamText.onFinish, only on success): `incrementQuota(
  *   userId, supabase)` — atomic +1 via the increment_cadam_daily_usage RPC.
+ *   Kept as cheap per-user/day telemetry even while the cap is off.
  *
  * Storage: public.cadam_daily_usage table + increment_cadam_daily_usage RPC.
  */
@@ -26,7 +32,10 @@ export class QuotaExceededError extends Error {
   }
 }
 
-export const DAILY_LIMIT = Number(process.env.CLIC3D_DAILY_LIMIT ?? 50);
+// Cap removed 2026-06-16: Infinity means `current >= DAILY_LIMIT` is never
+// true, so `assertQuotaAvailable` never throws and no user is ever blocked.
+// Env-independent on purpose (see file header).
+export const DAILY_LIMIT = Number.POSITIVE_INFINITY;
 
 /**
  * Read-only pre-call gate. Throws QuotaExceededError when the user has
