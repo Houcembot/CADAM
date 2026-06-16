@@ -257,6 +257,21 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
     supportsThinking: true,
     supportsVision: true,
   },
+  // PREMIUM candidates to A/B test for quality vs price (all paid, via
+  // OpenRouter). Compare the same prompt across these + the per-gen cost on
+  // the OpenRouter dashboard, then keep the cheapest that yields a REAL
+  // cookie cutter. Rough $/M (in/out): Gemini 3.1 Pro 1.25/10, Sonnet 3/15,
+  // Kimi K2.6 0.6/2.5.
+  {
+    id: 'google/gemini-3.1-pro-preview',
+    name: 'Gemini 3.1 Pro (premium)',
+    description:
+      'Google Gemini 3.1 Pro via OpenRouter — frontier quality, cheaper than Claude (paid)',
+    provider: 'Google',
+    supportsTools: true,
+    supportsThinking: true,
+    supportsVision: true,
+  },
   {
     id: 'anthropic/claude-sonnet-4.5',
     name: 'Claude Sonnet 4.5 (premium)',
@@ -265,6 +280,16 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
     provider: 'Anthropic',
     supportsTools: true,
     supportsThinking: true,
+    supportsVision: true,
+  },
+  {
+    id: 'moonshotai/kimi-k2.6',
+    name: 'Kimi K2.6 (premium, budget)',
+    description:
+      'Moonshot Kimi K2.6 (paid tier) via OpenRouter — cheapest frontier-ish, test if quality holds',
+    provider: 'Moonshot',
+    supportsTools: true,
+    supportsThinking: false,
     supportsVision: true,
   },
   {
