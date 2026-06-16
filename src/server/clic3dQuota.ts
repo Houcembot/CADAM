@@ -1,7 +1,7 @@
 /**
  * clic3d-cadam: daily generation quota per user.
  *
- * - DAILY_LIMIT comes from env CLIC3D_DAILY_LIMIT (default 10).
+ * - DAILY_LIMIT comes from env CLIC3D_DAILY_LIMIT (default 50).
  * - Pre-call (before LLM): `assertQuotaAvailable(userId, supabase)` — read-only
  *   check; throws QuotaExceededError when the user is at the cap. Does NOT
  *   increment, so failed/errored generations do not burn the user's quota.
@@ -26,7 +26,7 @@ export class QuotaExceededError extends Error {
   }
 }
 
-export const DAILY_LIMIT = Number(process.env.CLIC3D_DAILY_LIMIT ?? 10);
+export const DAILY_LIMIT = Number(process.env.CLIC3D_DAILY_LIMIT ?? 50);
 
 /**
  * Read-only pre-call gate. Throws QuotaExceededError when the user has

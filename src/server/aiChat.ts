@@ -1203,27 +1203,37 @@ export async function handleAiChatRequest(req: Request) {
               responseMessage.parts,
             );
 
-            // clic3d-cadam: only +1 the daily quota when the stream
-            // actually produced something. `onFinish` normally fires
-            // only on success (errors take the `onError` path), but
-            // we gate on real content as a belt-and-braces check so a
-            // zero-output finish (e.g. provider returned empty) doesn't
-            // burn a generation. DB errors here are logged but never
-            // bubble — quota bookkeeping must not break the response.
-            const producedOutput = finalizedParts.some((part) => {
+            // clic3d-cadam: +1 the daily quota EXACTLY ONCE per
+            // user-initiated turn. A single user prompt fans out into
+            // several requests to this handler: the model emits text +
+            // a client tool call (`build_parametric_model`), the client
+            // compiles the SCAD and POSTs the result back, and that
+            // round-trip re-enters here as a CONTINUATION. Those
+            // continuations are separate HTTP requests, so we can't
+            // dedupe in memory — instead we gate on `!isContinuation`,
+            // which is true only for the initial response of the turn.
+            // (Counting every onFinish burned 2–5 generations per real
+            // prompt — the "2 uses → 10/10" bug.)
+            //
+            // We still require the initial turn to have actually
+            // generated something — text, reasoning, OR a tool call the
+            // client will run (a pending `input-available` tool part
+            // still means the model produced a real generation) — so a
+            // genuinely empty finish doesn't burn the cap. `onFinish`
+            // already only fires on success; LLM errors take `onError`.
+            // DB errors here are logged but never bubble — quota
+            // bookkeeping must not break the response.
+            const generatedSomething = finalizedParts.some((part) => {
               if (part.type === 'text' || part.type === 'reasoning') {
                 const text = (part as { text?: string }).text;
                 return typeof text === 'string' && text.trim().length > 0;
               }
-              if (part.type.startsWith('tool-')) {
-                const state = (part as { state?: string }).state;
-                // input-available = still awaiting client tool output;
-                // anything else means the tool round-trip ran.
-                return state !== 'input-available';
-              }
-              return false;
+              // Any tool part on the initial turn — including one still
+              // awaiting the client (`input-available`) — counts: the
+              // model ran and decided to call a tool.
+              return part.type.startsWith('tool-');
             });
-            if (producedOutput) {
+            if (!isContinuation && generatedSomething) {
               try {
                 const quota = await incrementQuota(user.id, supabaseClient);
                 console.log(
