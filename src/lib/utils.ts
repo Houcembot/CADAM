@@ -236,8 +236,21 @@ export function getInitials(fullName: string | null) {
 }
 
 export const PARAMETRIC_MODELS: ModelConfig[] = [
-  // clic3d-cadam: ALL models below are FREE on OpenRouter — service free for all
-  // clic3d.tn visitors. CADAM is GPL-3.0; we keep that open-source policy.
+  // clic3d-cadam: ALL models below are FREE — service free for all clic3d.tn
+  // visitors. CADAM is GPL-3.0; we keep that open-source policy.
+  // NB: any `:free` id selected here is server-side routed by the free pool
+  // (see server/modelPool.ts pickModel), which currently pins the strongest
+  // free model — Gemini 2.5 Pro — for the parametric CAD path.
+  {
+    id: 'google-direct/gemini-2.5-pro:free',
+    name: 'Gemini 2.5 Pro (free)',
+    description:
+      'Google Gemini 2.5 Pro — strongest free model for parametric CAD',
+    provider: 'Google',
+    supportsTools: true,
+    supportsThinking: true,
+    supportsVision: true,
+  },
   {
     id: 'google/gemma-4-31b-it:free',
     name: 'Gemma 4 31B (free)',
@@ -250,7 +263,8 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
   {
     id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
     name: 'Nemotron Omni (free)',
-    description: 'NVIDIA multi-modal reasoning — image+text input, 256K context',
+    description:
+      'NVIDIA multi-modal reasoning — image+text input, 256K context',
     provider: 'NVIDIA',
     supportsTools: true,
     supportsThinking: true,

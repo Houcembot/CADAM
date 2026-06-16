@@ -28,10 +28,19 @@ type ModelEntry = {
 // 10 free OpenRouter models — order = preference. We try them
 // in round-robin starting from `rotation`.
 const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
-  // Google AI Studio direct (separate quota from OpenRouter — tried first)
+  // Google AI Studio direct (separate quota from OpenRouter — tried first).
+  // Order matters: pickModel returns the FIRST eligible google-direct entry
+  // and reportModelFailure never cools google-direct/* (see line ~166), so
+  // index 0 here is effectively the fixed model for the parametric CAD path.
+  // Pro is first ON PURPOSE — writing correct parametric OpenSCAD (hollow
+  // blades, Bezier profiles, manifold geometry) needs the strongest free
+  // model; Flash-Lite/Flash produced degenerate blobs. Trade-off: Pro's free
+  // daily quota is much smaller than Flash-Lite's and there is NO automatic
+  // fallback to Flash here — if Pro's quota is exhausted across all Google
+  // keys, the request fails rather than silently dropping to a weaker model.
   {
-    id: 'google-direct/gemini-2.5-flash-lite:free',
-    label: 'Gemini 2.5 Flash-Lite',
+    id: 'google-direct/gemini-2.5-pro:free',
+    label: 'Gemini 2.5 Pro',
     supportsVision: true,
     supportsTools: true,
   },
@@ -42,8 +51,8 @@ const FREE_MODELS: Omit<ModelEntry, 'cooledUntil' | 'lastError'>[] = [
     supportsTools: true,
   },
   {
-    id: 'google-direct/gemini-2.5-pro:free',
-    label: 'Gemini 2.5 Pro',
+    id: 'google-direct/gemini-2.5-flash-lite:free',
+    label: 'Gemini 2.5 Flash-Lite',
     supportsVision: true,
     supportsTools: true,
   },
