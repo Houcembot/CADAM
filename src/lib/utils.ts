@@ -236,18 +236,33 @@ export function getInitials(fullName: string | null) {
 }
 
 export const PARAMETRIC_MODELS: ModelConfig[] = [
-  // clic3d-cadam: ALL models below are FREE — service free for all clic3d.tn
-  // visitors. CADAM is GPL-3.0; we keep that open-source policy.
-  // NB: any `:free` id selected here is server-side routed by the free pool
-  // (see server/modelPool.ts pickModel), which prefers Gemini 2.5 Flash for
-  // the parametric CAD path, with a real fallback chain to Flash-Lite then the
-  // OpenRouter free tier (Pro's free quota is too small to be the default).
+  // clic3d-cadam: the DEFAULT (index 0) is FREE. `:free` ids are server-side
+  // routed by the free pool (see server/modelPool.ts pickModel): Gemini 2.5
+  // Flash, with a real fallback chain to Flash-Lite then the OpenRouter free
+  // tier (Pro's free quota is too small to be the default).
+  //
+  // PREMIUM (paid): non-`:free` ids skip the free-pool override and run as
+  // selected via OpenRouter (a paid call billed to our OpenRouter key — same
+  // path the `creative` mode already uses for Sonnet). Frontier quality to
+  // match adam.new. ⚠️ COST: any visitor who selects a premium model bills
+  // us per generation — until the 5-free-then-subscription gate lands
+  // (phase 2), treat this as a paid test option.
   {
     id: 'google-direct/gemini-2.5-flash:free',
     name: 'Gemini 2.5 Flash (free)',
     description:
       'Google Gemini 2.5 Flash — strong CAD quality, large free quota',
     provider: 'Google',
+    supportsTools: true,
+    supportsThinking: true,
+    supportsVision: true,
+  },
+  {
+    id: 'anthropic/claude-sonnet-4.5',
+    name: 'Claude Sonnet 4.5 (premium)',
+    description:
+      'Anthropic Claude Sonnet via OpenRouter — frontier CAD quality (paid)',
+    provider: 'Anthropic',
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,
