@@ -428,7 +428,7 @@ function MobileSidebar({
       >
         {/* For aria stuff */}
         <SheetHeader className="hidden">
-          <SheetTitle className="text-adam-text-primary">AdamCAD</SheetTitle>
+          <SheetTitle className="text-adam-text-primary">clic3d</SheetTitle>
           <SheetDescription>
             AI-powered CAD software for everyone
           </SheetDescription>

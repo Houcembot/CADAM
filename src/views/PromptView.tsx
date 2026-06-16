@@ -28,18 +28,14 @@ import type { AppUIMessage } from '@shared/chatAi';
 import { ensureInputRecords } from '@/lib/aiMessages';
 import { persistUserMessage } from '@/services/messageService';
 
-const EXTENSION_PILLS = [
-  {
-    href: 'https://cad.onshape.com/appstore/apps/Design%20&%20Documentation/690a8dc864e816c112aa66a0',
-    event: 'onshape_banner_click',
-    label: 'Onshape extension',
-  },
-  {
-    href: 'https://fusion.adam.new/install',
-    event: 'fusion_banner_click',
-    label: 'Fusion extension',
-  },
-] as const;
+// clic3d-cadam: removed upstream Adam-CAD product promos (Onshape / Fusion
+// extensions — not clic3d products). Kept as an empty list so the rendering
+// map below simply produces nothing.
+const EXTENSION_PILLS: ReadonlyArray<{
+  href: string;
+  event: string;
+  label: string;
+}> = [];
 
 export function PromptView() {
   const navigate = useNavigate();

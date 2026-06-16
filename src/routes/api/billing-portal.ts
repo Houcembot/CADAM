@@ -3,7 +3,7 @@ import { json, methodNotAllowed, preflight, requireUser } from '@/server/api';
 import { billing } from '@/server/billingClient';
 import { env } from '@/server/env';
 
-const appUrl = () => env('ADAM_URL') || 'https://adam.new/app';
+const appUrl = () => env('ADAM_URL') || 'https://clic3d.tn/creation';
 
 export const Route = createFileRoute('/api/billing-portal')({
   server: {
