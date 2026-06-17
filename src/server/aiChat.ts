@@ -36,7 +36,10 @@ import { corsHeaders, isRecord } from './api';
 import { env, requiredEnv } from './env';
 import { logError } from './serverLog';
 import { handleMeshRequest } from './mesh';
-import { getAnonSupabaseClient } from './supabaseClient';
+import {
+  getAnonSupabaseClient,
+  getServiceRoleSupabaseClient,
+} from './supabaseClient';
 
 /**
  * USD list price per **million** tokens, keyed by the same model IDs the
@@ -814,6 +817,11 @@ export async function handleAiChatRequest(req: Request) {
       headers: { Authorization: req.headers.get('Authorization') ?? '' },
     },
   });
+  // Credit ops go through a service-role client, never the user's
+  // authenticated client: the grant/consume/balance RPCs are locked to
+  // service_role so a client can't self-grant via the REST API. `user.id`
+  // below still comes from the verified JWT, so we debit the right account.
+  const creditsClient = getServiceRoleSupabaseClient();
   const {
     data: { user },
   } = await supabaseClient.auth.getUser();
@@ -850,7 +858,7 @@ export async function handleAiChatRequest(req: Request) {
   // Pre-call is read-only — the actual debit lives in streamText.onFinish so
   // that rate-limited or errored generations don't burn the user's balance.
   try {
-    const balance = await assertCreditsAvailable(user.id, supabaseClient);
+    const balance = await assertCreditsAvailable(user.id, creditsClient);
     console.log(`[clic3d-credits] precheck user=${user.id} balance=${balance}`);
   } catch (error) {
     if (error instanceof InsufficientCreditsError) {
@@ -1232,7 +1240,7 @@ export async function handleAiChatRequest(req: Request) {
               try {
                 const balance = await consumeCredits(
                   user.id,
-                  supabaseClient,
+                  creditsClient,
                   responseMessage.id,
                 );
                 console.log(

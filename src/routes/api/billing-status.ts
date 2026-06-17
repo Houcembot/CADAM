@@ -6,7 +6,7 @@ import {
   requireUser,
 } from '@/server/api';
 import { billing } from '@/server/billingClient';
-import { getAnonSupabaseClient } from '@/server/supabaseClient';
+import { getServiceRoleSupabaseClient } from '@/server/supabaseClient';
 import { getBalance } from '@/server/credits';
 
 export const Route = createFileRoute('/api/billing-status')({
@@ -17,15 +17,10 @@ export const Route = createFileRoute('/api/billing-status')({
         try {
           const user = await requireUser(request);
           // clic3d-cadam: the real spendable balance is cadam_credits, not the
-          // (bypassed) upstream billing service. Surface it in the token fields
-          // the UI reads (LimitReachedMessage / LowPromptsWarning / balance).
-          const supabase = getAnonSupabaseClient({
-            global: {
-              headers: {
-                Authorization: request.headers.get('Authorization') ?? '',
-              },
-            },
-          });
+          // (bypassed) upstream billing service. Read it with a service-role
+          // client (the balance RPC is locked to service_role); requireUser
+          // already validated the JWT, so user.id is trusted.
+          const supabase = getServiceRoleSupabaseClient();
           const balance = await getBalance(user.id, supabase);
           const status = await billing.getStatus(user.email!);
           return json({
