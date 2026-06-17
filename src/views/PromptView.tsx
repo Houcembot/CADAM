@@ -80,12 +80,14 @@ export function PromptView() {
 
   const lowPrompts = useMemo(() => {
     if (isLoading) return false;
-    return totalTokens > 0 && totalTokens <= 10;
+    // clic3d credits: "low" = enough for ~1 more generation (20 credits each).
+    return totalTokens >= 20 && totalTokens < 40;
   }, [totalTokens, isLoading]);
 
   const limitReached = useMemo(() => {
     if (isLoading) return false;
-    return totalTokens <= 0;
+    // clic3d credits: blocked when you can't afford a generation (< 20).
+    return totalTokens < 20;
   }, [totalTokens, isLoading]);
 
   // Trigger fade in on mount

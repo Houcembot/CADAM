@@ -1,82 +1,32 @@
-import { getLevel, useAuth } from '@/contexts/AuthContext';
-import { Link } from '@tanstack/react-router';
-import { TrialDialog } from './auth/TrialDialog';
-import { cn } from '@/lib/utils';
+// clic3d-cadam: soft warning shown when the credit balance is low (enough for
+// roughly one more premium generation). CTA opens the parent /recharge page.
+const PARENT_ORIGIN =
+  (import.meta.env.VITE_CLIC3D_PARENT_ORIGIN as string | undefined) ??
+  'https://clic3d.tn';
 
 export function LowPromptsWarningMessage({
   tokensRemaining,
-  layout = 'inline',
 }: {
   tokensRemaining: number;
   layout?: 'inline' | 'stacked';
 }) {
+  const openRecharge = () =>
+    window.open(`${PARENT_ORIGIN}/recharge`, '_blank', 'noopener');
+  const gens = Math.floor(tokensRemaining / 20);
+
   return (
     <div className="p-3 text-center text-sm text-adam-text-secondary">
-      <LowTokensWarningContent
-        tokensRemaining={tokensRemaining}
-        layout={layout}
-      />
-    </div>
-  );
-}
-
-function LowTokensWarningContent({
-  tokensRemaining,
-  layout,
-}: {
-  tokensRemaining: number;
-  layout: 'inline' | 'stacked';
-}) {
-  const { billing } = useAuth();
-  const level = getLevel(billing);
-  const hasTrialed = billing?.user.hasTrialed ?? false;
-
-  const tokensText = `You have ${tokensRemaining} token${tokensRemaining === 1 ? '' : 's'} remaining`;
-
-  // Free tier with trial already used
-  if (level === 'free' && hasTrialed) {
-    return (
       <span>
-        {tokensText}.{' '}
-        <Link to="/subscription" className="text-adam-blue hover:underline">
-          Upgrade
-        </Link>{' '}
-        for more tokens.
+        Il te reste {tokensRemaining} crédit{tokensRemaining === 1 ? '' : 's'}
+        {gens > 0 ? ` (~${gens} génération${gens > 1 ? 's' : ''})` : ''}.{' '}
+        <span
+          className="cursor-pointer text-adam-blue hover:underline"
+          onClick={openRecharge}
+        >
+          Recharger
+        </span>
+        .
       </span>
-    );
-  }
-
-  // Free tier without trial - pure CSS layout control
-  if (level === 'free' && !hasTrialed) {
-    return (
-      <div
-        className={cn(
-          'flex justify-center',
-          layout === 'stacked' ? 'flex-col gap-1' : 'flex-wrap gap-1',
-        )}
-      >
-        <span>{tokensText}.</span>
-        <TrialDialog>
-          <span className="cursor-pointer text-adam-blue hover:underline">
-            Start a free trial of Pro
-          </span>
-        </TrialDialog>
-      </div>
-    );
-  }
-
-  // Paid tier
-  return (
-    <span>
-      {tokensText}.{' '}
-      <Link to="/settings" className="text-adam-blue hover:underline">
-        Buy more tokens
-      </Link>{' '}
-      or{' '}
-      <Link to="/subscription" className="text-adam-blue hover:underline">
-        upgrade
-      </Link>
-      .
-    </span>
+    </div>
   );
 }
