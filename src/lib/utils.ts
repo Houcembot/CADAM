@@ -236,32 +236,11 @@ export function getInitials(fullName: string | null) {
 }
 
 export const PARAMETRIC_MODELS: ModelConfig[] = [
-  // clic3d-cadam: the DEFAULT (index 0) is FREE. `:free` ids are server-side
-  // routed by the free pool (see server/modelPool.ts pickModel): Gemini 2.5
-  // Flash, with a real fallback chain to Flash-Lite then the OpenRouter free
-  // tier (Pro's free quota is too small to be the default).
-  //
-  // PREMIUM (paid): non-`:free` ids skip the free-pool override and run as
-  // selected via OpenRouter (a paid call billed to our OpenRouter key — same
-  // path the `creative` mode already uses for Sonnet). Frontier quality to
-  // match adam.new. ⚠️ COST: any visitor who selects a premium model bills
-  // us per generation — until the 5-free-then-subscription gate lands
-  // (phase 2), treat this as a paid test option.
-  {
-    id: 'google-direct/gemini-2.5-flash:free',
-    name: 'Gemini 2.5 Flash (free)',
-    description:
-      'Google Gemini 2.5 Flash — strong CAD quality, large free quota',
-    provider: 'Google',
-    supportsTools: true,
-    supportsThinking: true,
-    supportsVision: true,
-  },
-  // PREMIUM candidates to A/B test for quality vs price (all paid, via
-  // OpenRouter). Compare the same prompt across these + the per-gen cost on
-  // the OpenRouter dashboard, then keep the cheapest that yields a REAL
-  // cookie cutter. Rough $/M (in/out): Gemini 3.1 Pro 1.25/10, Sonnet 3/15,
-  // Kimi K2.6 0.6/2.5.
+  // clic3d-cadam: PREMIUM-ONLY. Toute génération coûte 20 crédits (gate dans
+  // server/aiChat.ts) — pas de tier gratuit ici. Le défaut (index 0) = Gemini
+  // 3.1 Pro (frontier, payant via OpenRouter). Le pool gratuit / les ids
+  // `:free` / l'override modelPool restent dans le code mais ne sont plus
+  // sélectionnables par l'utilisateur.
   {
     id: 'google/gemini-3.1-pro-preview',
     name: 'Gemini 3.1 Pro (premium)',
@@ -281,53 +260,6 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,
-  },
-  {
-    id: 'moonshotai/kimi-k2.6',
-    name: 'Kimi K2.6 (premium, budget)',
-    description:
-      'Moonshot Kimi K2.6 (paid tier) via OpenRouter — cheapest frontier-ish, test if quality holds',
-    provider: 'Moonshot',
-    supportsTools: true,
-    supportsThinking: false,
-    supportsVision: true,
-  },
-  {
-    id: 'google/gemma-4-31b-it:free',
-    name: 'Gemma 4 31B (free)',
-    description: 'Google Gemma 4 with vision — 262K context, balanced CAD',
-    provider: 'Google',
-    supportsTools: true,
-    supportsThinking: false,
-    supportsVision: true,
-  },
-  {
-    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-    name: 'Nemotron Omni (free)',
-    description:
-      'NVIDIA multi-modal reasoning — image+text input, 256K context',
-    provider: 'NVIDIA',
-    supportsTools: true,
-    supportsThinking: true,
-    supportsVision: true,
-  },
-  {
-    id: 'moonshotai/kimi-k2.6:free',
-    name: 'Kimi K2.6 (free)',
-    description: 'Moonshot Kimi 262K context — fast iterative generation',
-    provider: 'Moonshot',
-    supportsTools: true,
-    supportsThinking: false,
-    supportsVision: false,
-  },
-  {
-    id: 'openrouter/free',
-    name: 'Auto (free)',
-    description: 'OpenRouter auto-routes to best-available free model',
-    provider: 'OpenRouter',
-    supportsTools: true,
-    supportsThinking: false,
-    supportsVision: false,
   },
 ];
 
