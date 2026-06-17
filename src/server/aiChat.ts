@@ -5,10 +5,10 @@ import { pickOpenRouterKey, reportOpenRouterFailure } from './openrouterPool';
 import { pickGoogleApiKey, reportGoogleFailure } from './googlePool';
 import { pickModel, reportModelFailure } from './modelPool';
 import {
-  assertQuotaAvailable,
-  incrementQuota,
-  QuotaExceededError,
-} from './clic3dQuota';
+  assertCreditsAvailable,
+  consumeCredits,
+  InsufficientCreditsError,
+} from './credits';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
 import { imageIdFromFilename, imageStoragePath } from '@shared/imageRefs';
@@ -846,26 +846,21 @@ export async function handleAiChatRequest(req: Request) {
     );
   }
 
-  // clic3d-cadam: daily quota gate (free service, default 10 gens/jour/user).
-  // We bypass the upstream billing service (not configured for clic3d).
-  // Pre-call is read-only — the actual +1 lives in streamText.onFinish so
-  // that rate-limited or errored generations don't burn the user's cap.
+  // clic3d-cadam: credit gate — every generation costs 20 credits.
+  // Pre-call is read-only — the actual debit lives in streamText.onFinish so
+  // that rate-limited or errored generations don't burn the user's balance.
   try {
-    const quota = await assertQuotaAvailable(user.id, supabaseClient);
-    console.log(
-      `[clic3d-quota] precheck user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`,
-    );
+    const balance = await assertCreditsAvailable(user.id, supabaseClient);
+    console.log(`[clic3d-credits] precheck user=${user.id} balance=${balance}`);
   } catch (error) {
-    if (error instanceof QuotaExceededError) {
+    if (error instanceof InsufficientCreditsError) {
       return jsonResponse(
         {
-          error: 'daily_limit_reached',
-          code: 'daily_limit_reached',
-          message: error.message,
-          count: error.count,
-          limit: error.limit,
+          error: 'insufficient_credits',
+          balance: error.balance,
+          needed: error.needed,
         },
-        429,
+        402,
       );
     }
     logError(error, {
@@ -873,9 +868,9 @@ export async function handleAiChatRequest(req: Request) {
       statusCode: 500,
       userId: user.id,
       conversationId: conversation.id,
-      additionalContext: { operation: 'clic3d_quota_check' },
+      additionalContext: { operation: 'credits_precheck' },
     });
-    return jsonResponse({ error: 'Quota service unavailable' }, 503);
+    return jsonResponse({ error: 'Credits service unavailable' }, 503);
   }
 
   const tools =
@@ -1203,7 +1198,7 @@ export async function handleAiChatRequest(req: Request) {
               responseMessage.parts,
             );
 
-            // clic3d-cadam: +1 the daily quota EXACTLY ONCE per
+            // clic3d-cadam: debit 20 credits EXACTLY ONCE per
             // user-initiated turn. A single user prompt fans out into
             // several requests to this handler: the model emits text +
             // a client tool call (`build_parametric_model`), the client
@@ -1219,9 +1214,9 @@ export async function handleAiChatRequest(req: Request) {
             // generated something — text, reasoning, OR a tool call the
             // client will run (a pending `input-available` tool part
             // still means the model produced a real generation) — so a
-            // genuinely empty finish doesn't burn the cap. `onFinish`
+            // genuinely empty finish doesn't burn credits. `onFinish`
             // already only fires on success; LLM errors take `onError`.
-            // DB errors here are logged but never bubble — quota
+            // DB errors here are logged but never bubble — credit
             // bookkeeping must not break the response.
             const generatedSomething = finalizedParts.some((part) => {
               if (part.type === 'text' || part.type === 'reasoning') {
@@ -1235,17 +1230,21 @@ export async function handleAiChatRequest(req: Request) {
             });
             if (!isContinuation && generatedSomething) {
               try {
-                const quota = await incrementQuota(user.id, supabaseClient);
-                console.log(
-                  `[clic3d-quota] success user=${user.id} count=${quota.count}/${quota.limit} remaining=${quota.remaining}`,
+                const balance = await consumeCredits(
+                  user.id,
+                  supabaseClient,
+                  responseMessage.id,
                 );
-              } catch (quotaErr) {
-                logError(quotaErr, {
+                console.log(
+                  `[clic3d-credits] consumed user=${user.id} -20 balance=${balance}`,
+                );
+              } catch (creditErr) {
+                logError(creditErr, {
                   functionName: 'ai-chat',
                   statusCode: 500,
                   userId: user.id,
                   conversationId: conversation.id,
-                  additionalContext: { operation: 'clic3d_quota_increment' },
+                  additionalContext: { operation: 'credits_consume' },
                 });
               }
             }
