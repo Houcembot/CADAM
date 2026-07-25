@@ -112,42 +112,8 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
     <div
       className={`${isSidebarOpen ? 'w-64' : 'w-16'} flex h-full flex-shrink-0 flex-col bg-adam-bg-dark pb-2 transition-all duration-300 ease-in-out dark:bg-gray-950`}
     >
-      <div className="p-4 dark:border-gray-800">
-        <ConditionalWrapper
-          condition={!isSidebarOpen}
-          wrapper={(children) => (
-            <Tooltip>
-              <TooltipTrigger asChild>{children}</TooltipTrigger>
-              <TooltipContent side="right" className="flex flex-col">
-                <span className="font-semibold">Home</span>
-                <span className="text-xs text-muted-foreground">Home Page</span>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        >
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center space-x-2"
-            onClick={() => sidebarNavigate('/')}
-          >
-            {isSidebarOpen ? (
-              <div className="flex w-full">
-                <img
-                  className="mx-auto h-8 w-full"
-                  src={`${import.meta.env.BASE_URL}/adam-logo-full.svg`}
-                  alt="Logo"
-                />
-              </div>
-            ) : (
-              <img
-                src={`${import.meta.env.BASE_URL}/adam-logo.svg`}
-                alt="Logo"
-                className="h-8 w-8 min-w-8"
-              />
-            )}
-          </button>
-        </ConditionalWrapper>
-      </div>
+      {/* Logo "adam" retiré (de-branding clic3d) — la navigation Home reste
+          accessible via le bouton "New Creation" ci-dessous. */}
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div
