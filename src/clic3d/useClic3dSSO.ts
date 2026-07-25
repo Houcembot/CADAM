@@ -18,16 +18,33 @@ export function useClic3dSSO(): SSOStatus {
 
     async function bridgeSession() {
       try {
+        // Toujours demander le token du parent : il identifie l'utilisateur clic3d
+        // COURANT (email réel, ou fb-<id>@users.clic3d.tn pour un compte Facebook
+        // sans email). C'est la source de vérité de "qui est connecté".
+        const tokenResp = await requestTokenFromParent(controller.signal);
+        if (cancelled) return;
+
+        // Une session Supabase peut persister dans le navigateur (localStorage).
+        // On ne la réutilise QUE si elle appartient bien à l'utilisateur clic3d
+        // courant. Sinon (ancien Gmail d'une session précédente, navigateur
+        // partagé, 2e compte du même visiteur) on la purge et on relie l'iframe
+        // au bon compte — sans quoi l'historique/crédits partiraient sur le
+        // mauvais compte.
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (session) {
+        const current = session?.user?.email?.toLowerCase() ?? null;
+        const expected = tokenResp.email?.toLowerCase() ?? null;
+
+        if (session && current && expected && current === expected) {
           if (!cancelled) setStatus('ready');
           return;
         }
 
-        const tokenResp = await requestTokenFromParent(controller.signal);
-        if (cancelled) return;
+        if (session) {
+          // Session d'un AUTRE compte → on la supprime avant de relier.
+          await supabase.auth.signOut();
+        }
 
         const { error } = await supabase.auth.verifyOtp({
           type: 'magiclink',
