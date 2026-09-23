@@ -70,6 +70,7 @@ const MODEL_PRICES: Record<
   'anthropic/claude-opus-4': { input: 15, output: 75 },
   'anthropic/claude-sonnet-4.6': { input: 3, output: 15 },
   'anthropic/claude-sonnet-4.5': { input: 3, output: 15 },
+  'anthropic/claude-sonnet-5': { input: 2, output: 10 },
   'anthropic/claude-haiku-4.5': { input: 1, output: 5 },
 
   // Google — cached content reads bill at ~25% of input price; there is
@@ -84,6 +85,7 @@ const MODEL_PRICES: Record<
 
   // OpenAI — prompt-cache reads at 50% of input.
   'openai/gpt-5.5': { input: 5, output: 20, cacheRead: 2.5, cacheWrite: 5 },
+  'openai/gpt-5.6-sol': { input: 2, output: 10 },
 
   // MoonshotAI
   'moonshotai/kimi-k2.6': { input: 0.6, output: 2.5 },
@@ -792,7 +794,7 @@ function parametricTools({
 
 function chatModel(conversation: ConversationAccess, model: Model) {
   if (conversation.type === 'creative') {
-    return 'anthropic/claude-sonnet-4.5';
+    return 'anthropic/claude-sonnet-5';
   }
   return model;
 }

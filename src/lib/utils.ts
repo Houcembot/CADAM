@@ -237,26 +237,27 @@ export function getInitials(fullName: string | null) {
 
 export const PARAMETRIC_MODELS: ModelConfig[] = [
   // clic3d-cadam: PREMIUM-ONLY. Toute génération coûte 20 crédits (gate dans
-  // server/aiChat.ts) — pas de tier gratuit ici. Le défaut (index 0) = Gemini
-  // 3.1 Pro (frontier, payant via OpenRouter). Le pool gratuit / les ids
-  // `:free` / l'override modelPool restent dans le code mais ne sont plus
-  // sélectionnables par l'utilisateur.
+  // server/aiChat.ts) — pas de tier gratuit ici. Gemini retiré le 2026-09-23
+  // (erreurs/instabilité rapportées en prod) au profit de deux frontiers
+  // fiables sur des providers distincts. Le défaut (index 0) = Claude
+  // Sonnet 5. Le pool gratuit / les ids `:free` / l'override modelPool
+  // restent dans le code mais ne sont plus sélectionnables par l'utilisateur.
   {
-    id: 'google/gemini-3.1-pro-preview',
-    name: 'Gemini 3.1 Pro (premium)',
+    id: 'anthropic/claude-sonnet-5',
+    name: 'Claude Sonnet 5 (premium)',
     description:
-      'Google Gemini 3.1 Pro via OpenRouter — frontier quality, cheaper than Claude (paid)',
-    provider: 'Google',
+      'Anthropic Claude Sonnet 5 via OpenRouter — frontier CAD quality (paid)',
+    provider: 'Anthropic',
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,
   },
   {
-    id: 'anthropic/claude-sonnet-4.5',
-    name: 'Claude Sonnet 4.5 (premium)',
+    id: 'openai/gpt-5.6-sol',
+    name: 'GPT-5.6 Sol (premium)',
     description:
-      'Anthropic Claude Sonnet via OpenRouter — frontier CAD quality (paid)',
-    provider: 'Anthropic',
+      'OpenAI GPT-5.6 Sol via OpenRouter — frontier quality, second provider for redundancy (paid)',
+    provider: 'OpenAI',
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,
