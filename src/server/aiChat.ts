@@ -13,6 +13,11 @@ import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
 import { imageIdFromFilename, imageStoragePath } from '@shared/imageRefs';
 import { normalizeConversationSuggestions } from '@shared/suggestions';
+import {
+  PRIMARY_PARAMETRIC_MODEL,
+  openRouterModelsFor,
+  resolveChatModel,
+} from '@shared/parametricModels';
 import type { Conversation, Message, MeshFileType, Model } from '@shared/types';
 import {
   convertToModelMessages,
@@ -381,8 +386,12 @@ function buildChatModel(
   // Everything else goes through OpenRouter. OpenRouter accepts the same
   // model IDs CADAM uses (e.g. "anthropic/claude-opus-4.8",
   // "google/gemini-3.1-pro-preview", "google/gemma-4-31b-it:free").
+  // Liste de secours : si le modèle principal échoue, OpenRouter rejoue la
+  // requête sur le suivant (voir shared/parametricModels.ts).
+  const models = openRouterModelsFor(modelId);
   return {
     model: providers.openrouter().chat(modelId, {
+      ...(models ? { models } : {}),
       ...(thinking
         ? { reasoning: { max_tokens: THINKING_BUDGET_TOKENS } }
         : {}),
@@ -794,9 +803,10 @@ function parametricTools({
 
 function chatModel(conversation: ConversationAccess, model: Model) {
   if (conversation.type === 'creative') {
-    return 'anthropic/claude-sonnet-5';
+    return PRIMARY_PARAMETRIC_MODEL;
   }
-  return model;
+  // Jamais le modèle brut du navigateur : seuls les modèles autorisés passent.
+  return resolveChatModel(model);
 }
 
 function systemPrompt(conversation: ConversationAccess) {

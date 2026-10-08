@@ -23,6 +23,7 @@ import {
   type ChatMessage,
 } from '@/lib/aiMessages';
 import parseParameters from '@shared/parseParameters';
+import { PRIMARY_PARAMETRIC_MODEL } from '@shared/parametricModels';
 import { supabase } from '@/lib/supabase';
 import { updateParameter } from '@/lib/utils';
 import {
@@ -190,9 +191,7 @@ function ConversationEditor() {
   // ── Per-conversation UI state ───────────────────────────────────────────
   const [model, setModel] = useState<Model>(
     conversation.settings?.model ??
-      (conversation.type === 'creative'
-        ? 'quality'
-        : 'anthropic/claude-sonnet-5'),
+      (conversation.type === 'creative' ? 'quality' : PRIMARY_PARAMETRIC_MODEL),
   );
   const [activePreview, setActivePreview] = useState<ActivePreview>(null);
   const [parameters, setParameters] = useState<Parameter[]>([]);

@@ -2,6 +2,10 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Parameter } from '@shared/types';
 import { ModelConfig } from '../types/misc.ts';
+import {
+  PRIMARY_PARAMETRIC_MODEL,
+  FALLBACK_PARAMETRIC_MODEL,
+} from '@shared/parametricModels';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -237,26 +241,25 @@ export function getInitials(fullName: string | null) {
 
 export const PARAMETRIC_MODELS: ModelConfig[] = [
   // clic3d-cadam: PREMIUM-ONLY. Toute génération coûte 20 crédits (gate dans
-  // server/aiChat.ts) — pas de tier gratuit ici. Gemini retiré le 2026-09-23
-  // (erreurs/instabilité rapportées en prod) au profit de deux frontiers
-  // fiables sur des providers distincts. Le défaut (index 0) = Claude
-  // Sonnet 5. Le pool gratuit / les ids `:free` / l'override modelPool
-  // restent dans le code mais ne sont plus sélectionnables par l'utilisateur.
+  // server/aiChat.ts). Choix du 08/10/2026 sur banc d'essai (voir
+  // shared/parametricModels.ts) : Claude Sonnet 4.5 par défaut (index 0),
+  // GPT-5.6 Sol en secours automatique chez un autre fournisseur. Sonnet 5
+  // et Gemini sont retirés.
   {
-    id: 'anthropic/claude-sonnet-5',
-    name: 'Claude Sonnet 5 (premium)',
+    id: PRIMARY_PARAMETRIC_MODEL,
+    name: 'Claude Sonnet 4.5 (premium)',
     description:
-      'Anthropic Claude Sonnet 5 via OpenRouter — frontier CAD quality (paid)',
+      'Anthropic Claude Sonnet 4.5 via OpenRouter — rapide et fiable en CAO (paid)',
     provider: 'Anthropic',
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,
   },
   {
-    id: 'openai/gpt-5.6-sol',
+    id: FALLBACK_PARAMETRIC_MODEL,
     name: 'GPT-5.6 Sol (premium)',
     description:
-      'OpenAI GPT-5.6 Sol via OpenRouter — frontier quality, second provider for redundancy (paid)',
+      'OpenAI GPT-5.6 Sol via OpenRouter — second fournisseur, secours automatique (paid)',
     provider: 'OpenAI',
     supportsTools: true,
     supportsThinking: true,

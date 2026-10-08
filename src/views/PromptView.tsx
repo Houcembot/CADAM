@@ -8,6 +8,7 @@ import TextAreaChat from '@/components/TextAreaChat';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useMemo, useEffect } from 'react';
 import { Model } from '@shared/types';
+import { PRIMARY_PARAMETRIC_MODEL } from '@shared/parametricModels';
 import { MessageItem } from '../types/misc.ts';
 import { LimitReachedMessage } from '@/components/LimitReachedMessage';
 import { LowPromptsWarningMessage } from '@/components/LowPromptsWarningMessage';
@@ -57,7 +58,7 @@ export function PromptView() {
 
   const [type, setType] = useState<'parametric' | 'creative'>('parametric');
 
-  const [model, setModel] = useState<Model>('anthropic/claude-sonnet-5');
+  const [model, setModel] = useState<Model>(PRIMARY_PARAMETRIC_MODEL);
 
   const handleTypeChange = (newType: 'parametric' | 'creative') => {
     setType(newType);
@@ -65,7 +66,7 @@ export function PromptView() {
     if (newType === 'creative') {
       setModel('quality');
     } else {
-      setModel('anthropic/claude-sonnet-5');
+      setModel(PRIMARY_PARAMETRIC_MODEL);
     }
   };
 
