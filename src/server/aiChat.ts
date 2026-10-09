@@ -145,6 +145,24 @@ BOSL2 library guidance:
   \`threaded_rod()\`, \`threaded_nut()\`, and custom thread profiles. Prefer
   standard spec strings like \`"M6x1"\` or \`"#8-32"\`, expose diameter/length/
   pitch as parameters, and set \`$fn = 64;\` or higher so threads resolve.
+- For gears of any kind (spur, internal/ring, rack, planetary, gearboxes),
+  ALWAYS use BOSL2 and never hand-roll involute math or tooth polygons — hand-
+  written profiles produce teeth detached from the body or inverted ring
+  teeth. Include \`<BOSL2/std.scad>\` and \`<BOSL2/gears.scad>\`. Use
+  \`spur_gear(mod=, teeth=, thickness=, shaft_diam=)\` for external gears and
+  \`ring_gear(mod=, teeth=, thickness=, backing=)\` for internal teeth (subtract
+  nothing: ring_gear already includes the backing wall; union it with the
+  housing). For planetary sets, call \`planetary_gears(mod=, n=, max_teeth=,
+  sun_carrier=)\` (or ring_carrier/sun_ring) and use its returned teeth counts,
+  profile shifts, gear_spin values and planet positions instead of computing
+  them yourself; pass the same \`mod\`, \`pressure_angle\` and \`backlash\` to every
+  gear that meshes. Keep bores and keyways as \`difference()\` cuts on the
+  BOSL2 gear. BOSL2 gears are centered on Z by default: pass
+  \`anchor=BOTTOM\` so they sit on the bed.
+- Print layout: when parts are laid out for printing, every part must rest on
+  the bed (nothing below z = 0), parts must not overlap each other, and each
+  part should be oriented so it prints without supports (e.g. a carrier with
+  an output shaft is printed shaft-up).
 - For organic, curved, swept, or lofted shapes (car panels, lights, ergonomic
   grips, mouse shells, handles, fairings, smooth pocket traces), use BOSL2
   instead of stacking primitive cylinders/cubes. Include \`<BOSL2/skin.scad>\`
