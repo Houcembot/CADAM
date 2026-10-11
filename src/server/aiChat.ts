@@ -42,6 +42,7 @@ import { billing, BillingClientError } from './billingClient';
 import { corsHeaders, isRecord } from './api';
 import { env, requiredEnv } from './env';
 import { logError } from './serverLog';
+import { userFacingModelError } from '@shared/modelErrors';
 import { handleMeshRequest } from './mesh';
 import {
   getAnonSupabaseClient,
@@ -1274,8 +1275,7 @@ export async function handleAiChatRequest(req: Request) {
           operation: 'ui_message_stream',
         },
       });
-      const message = error instanceof Error ? error.message : String(error);
-      return `Model call failed (${resolvedProvider}/${actualModelId}): ${message}`;
+      return userFacingModelError(error);
     },
     execute: async ({ writer }) => {
       // Title (first user turn only) runs in parallel with the model
