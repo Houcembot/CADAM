@@ -1,4 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
+import type { LanguageModelV3 } from '@ai-sdk/provider';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { pickOpenRouterKey, reportOpenRouterFailure } from './openrouterPool';
@@ -17,6 +18,7 @@ import {
   PRIMARY_PARAMETRIC_MODEL,
   openRouterModelsFor,
   resolveChatModel,
+  directAnthropicModelId,
 } from '@shared/parametricModels';
 import type { Conversation, Message, MeshFileType, Model } from '@shared/types';
 import {
@@ -76,6 +78,12 @@ const MODEL_PRICES: Record<
   'anthropic/claude-sonnet-4.6': { input: 3, output: 15 },
   'anthropic/claude-sonnet-4.5': { input: 3, output: 15 },
   'anthropic/claude-sonnet-5': { input: 2, output: 10 },
+  'anthropic/claude-sonnet-5.5': {
+    input: 2,
+    output: 10,
+    cacheRead: 0.1,
+    cacheWrite: 2.5,
+  },
   'anthropic/claude-haiku-4.5': { input: 1, output: 5 },
 
   // Google — cached content reads bill at ~25% of input price; there is
@@ -159,6 +167,13 @@ BOSL2 library guidance:
   gear that meshes. Keep bores and keyways as \`difference()\` cuts on the
   BOSL2 gear. BOSL2 gears are centered on Z by default: pass
   \`anchor=BOTTOM\` so they sit on the bed.
+- Two external gears that mesh side by side: NEVER compute the center
+  distance as mod*(z1+z2)/2 (BOSL2 auto profile-shifts small gears, which
+  changes it) and never leave the teeth unphased — they would overlap. Use
+  exactly this pattern (teeth1, teeth2 = tooth counts; same mod, pressure_angle
+  and backlash on both):
+  \`spur_gear(mod=m, teeth=teeth1, gear_spin=-90, anchor=BOTTOM);\`
+  \`right(gear_dist(mod=m, teeth1=teeth1, teeth2=teeth2)) spur_gear(mod=m, teeth=teeth2, gear_spin=90-180/teeth2, anchor=BOTTOM);\`
 - Print layout: when parts are laid out for printing, every part must rest on
   the bed (nothing below z = 0), parts must not overlap each other, and each
   part should be oriented so it prints without supports (e.g. a carrier with
@@ -320,7 +335,60 @@ function providerFor(modelId: string): ChatProvider {
   // Gemini Flash-Lite free tier). All other IDs (including OpenRouter-
   // hosted `google/gemma-*:free`) keep going through OpenRouter.
   if (modelId.startsWith('google-direct/')) return 'google';
+  // clic3d : les modèles Claude passent en direct par l'API Anthropic quand
+  // la clé est posée (OpenRouter reste le secours, voir buildChatModel).
+  if (modelId.startsWith('anthropic/') && process.env.ANTHROPIC_API_KEY)
+    return 'anthropic';
   return 'openrouter';
+}
+
+/**
+ * Essaie le modèle principal ; si l'appel échoue avant le premier octet
+ * (panne, limite de débit, clé refusée), rejoue la même requête sur le
+ * secours. Une erreur au milieu du flux n'est pas rejouée : le client a
+ * déjà reçu du texte.
+ */
+function withFallback(
+  primary: LanguageModel,
+  fallback: LanguageModel,
+): LanguageModel {
+  const p = primary as unknown as LanguageModelV3;
+  const f = fallback as unknown as LanguageModelV3;
+  // Objet explicite : les modèles du SDK sont des classes dont `provider` et
+  // `supportedUrls` sont des accesseurs, perdus par une simple copie `...p`.
+  const model: LanguageModelV3 = {
+    specificationVersion: 'v3',
+    provider: p.provider,
+    modelId: p.modelId,
+    get supportedUrls() {
+      return p.supportedUrls;
+    },
+    doGenerate: async (options) => {
+      try {
+        return await p.doGenerate(options);
+      } catch (error) {
+        if (options.abortSignal?.aborted) throw error;
+        console.error(
+          '[clic3d] anthropic direct en échec, secours OpenRouter :',
+          error instanceof Error ? error.message : error,
+        );
+        return f.doGenerate(options);
+      }
+    },
+    doStream: async (options) => {
+      try {
+        return await p.doStream(options);
+      } catch (error) {
+        if (options.abortSignal?.aborted) throw error;
+        console.error(
+          '[clic3d] anthropic direct en échec, secours OpenRouter :',
+          error instanceof Error ? error.message : error,
+        );
+        return f.doStream(options);
+      }
+    },
+  };
+  return model;
 }
 
 type AnthropicProvider = ReturnType<typeof createAnthropic>;
@@ -401,6 +469,33 @@ function buildChatModel(
       model: providers.google().chat(bareId),
     };
   }
+  if (provider === 'anthropic') {
+    const fallback = buildOpenRouterChatModel(modelId, providers, thinking);
+    return {
+      model: withFallback(
+        providers.anthropic()(directAnthropicModelId(modelId)),
+        fallback.model,
+      ),
+      providerOptions: thinking
+        ? {
+            anthropic: {
+              thinking: {
+                type: 'enabled',
+                budgetTokens: THINKING_BUDGET_TOKENS,
+              },
+            },
+          }
+        : undefined,
+    };
+  }
+  return buildOpenRouterChatModel(modelId, providers, thinking);
+}
+
+function buildOpenRouterChatModel(
+  modelId: string,
+  providers: ChatProviders,
+  thinking: boolean,
+): { model: LanguageModel; providerOptions?: ProviderOptions } {
   // Everything else goes through OpenRouter. OpenRouter accepts the same
   // model IDs CADAM uses (e.g. "anthropic/claude-opus-4.8",
   // "google/gemini-3.1-pro-preview", "google/gemma-4-31b-it:free").

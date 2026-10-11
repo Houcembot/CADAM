@@ -35,3 +35,17 @@ describe('prompt cadam — pièces posées sur le plateau', () => {
     assert.match(src, /nothing below z = 0/);
   });
 });
+
+// 11/10/2026 : Sonnet 4.6 laissait 2 fois sur 3 les dents de deux engrenages
+// se chevaucher (pas de déphasage) ; l'entraxe m*(z1+z2)/2 est faux dès que
+// BOSL2 corrige le profil d'un petit pignon. Règle vérifiée sous OpenSCAD
+// (20/40, 15/21, 15/40, 20/21, 9/30, 12/13 : intersection vide).
+describe('prompt cadam — engrenages appariés', () => {
+  it('impose gear_dist et le déphasage gear_spin', () => {
+    assert.ok(
+      src.includes('right(gear_dist(mod=m, teeth1=teeth1, teeth2=teeth2))'),
+    );
+    assert.ok(src.includes('gear_spin=-90'));
+    assert.ok(src.includes('gear_spin=90-180/teeth2'));
+  });
+});

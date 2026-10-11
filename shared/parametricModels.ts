@@ -1,11 +1,16 @@
 // Modèles de génération paramétrique (OpenSCAD) de clic3d-cadam.
 //
+// 11/10/2026 : Claude Sonnet 5.5 en principal, appelé en direct sur l'API
+// Anthropic (clé ANTHROPIC_API_KEY) ; OpenRouter (Sonnet 5.5 puis GPT-5.6 Sol)
+// ne sert qu'en secours. Banc : 12/12 pièces compilées et aux bonnes cotes,
+// engrenages appariés corrects 3/3 (Sonnet 4.6 : 1/3).
+//
 // Choix du 08/10/2026, sur banc d'essai (prompt et outil réels, 3 pièces
 // compilées avec OpenSCAD et mesurées) : Claude Sonnet 4.5 en principal,
 // GPT-5.6 Sol en secours chez un autre fournisseur. Sonnet 5 est écarté
 // (une pièce non compilée, deux aux mauvaises dimensions).
 
-export const PRIMARY_PARAMETRIC_MODEL = 'anthropic/claude-sonnet-4.5';
+export const PRIMARY_PARAMETRIC_MODEL = 'anthropic/claude-sonnet-5.5';
 export const FALLBACK_PARAMETRIC_MODEL = 'openai/gpt-5.6-sol';
 
 /**
@@ -38,4 +43,12 @@ export function resolveChatModel(requested: string | null | undefined): string {
   return requested && ALLOWED_CHAT_MODELS.has(requested)
     ? requested
     : PRIMARY_PARAMETRIC_MODEL;
+}
+
+/**
+ * Identifiant de l'API Anthropic directe pour un modèle « anthropic/… » :
+ * « anthropic/claude-sonnet-5.5 » → « claude-sonnet-5-5 ».
+ */
+export function directAnthropicModelId(modelId: string): string {
+  return modelId.replace(/^anthropic\//, '').replace(/\./g, '-');
 }

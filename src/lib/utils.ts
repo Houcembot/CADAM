@@ -242,14 +242,13 @@ export function getInitials(fullName: string | null) {
 export const PARAMETRIC_MODELS: ModelConfig[] = [
   // clic3d-cadam: PREMIUM-ONLY. Toute génération coûte 20 crédits (gate dans
   // server/aiChat.ts). Choix du 08/10/2026 sur banc d'essai (voir
-  // shared/parametricModels.ts) : Claude Sonnet 4.5 par défaut (index 0),
+  // shared/parametricModels.ts) : Claude Sonnet 5.5 par défaut (index 0, depuis le 11/10/2026),
   // GPT-5.6 Sol en secours automatique chez un autre fournisseur. Sonnet 5
   // et Gemini sont retirés.
   {
     id: PRIMARY_PARAMETRIC_MODEL,
-    name: 'Claude Sonnet 4.5 (premium)',
-    description:
-      'Anthropic Claude Sonnet 4.5 via OpenRouter — rapide et fiable en CAO (paid)',
+    name: 'Claude Sonnet 5.5 (premium)',
+    description: 'Anthropic Claude Sonnet 5.5 — rapide et fiable en CAO (paid)',
     provider: 'Anthropic',
     supportsTools: true,
     supportsThinking: true,

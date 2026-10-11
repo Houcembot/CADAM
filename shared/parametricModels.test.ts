@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  directAnthropicModelId,
   PRIMARY_PARAMETRIC_MODEL,
   FALLBACK_PARAMETRIC_MODEL,
   openRouterModelsFor,
@@ -12,7 +13,7 @@ import {
 // 1/3 aux bonnes dimensions — écarté.
 describe('modèles paramétriques', () => {
   it('Claude Sonnet 4.5 est le modèle principal', () => {
-    assert.equal(PRIMARY_PARAMETRIC_MODEL, 'anthropic/claude-sonnet-4.5');
+    assert.equal(PRIMARY_PARAMETRIC_MODEL, 'anthropic/claude-sonnet-5.5');
   });
 
   it('GPT-5.6 Sol est le secours, chez un autre fournisseur', () => {
@@ -21,7 +22,7 @@ describe('modèles paramétriques', () => {
 
   it('le principal bascule sur le secours en cas d’erreur', () => {
     assert.deepEqual(openRouterModelsFor(PRIMARY_PARAMETRIC_MODEL), [
-      'anthropic/claude-sonnet-4.5',
+      'anthropic/claude-sonnet-5.5',
       'openai/gpt-5.6-sol',
     ]);
   });
@@ -29,7 +30,7 @@ describe('modèles paramétriques', () => {
   it('le secours choisi à la main rebascule sur le principal', () => {
     assert.deepEqual(openRouterModelsFor(FALLBACK_PARAMETRIC_MODEL), [
       'openai/gpt-5.6-sol',
-      'anthropic/claude-sonnet-4.5',
+      'anthropic/claude-sonnet-5.5',
     ]);
   });
 
@@ -41,8 +42,8 @@ describe('modèles paramétriques', () => {
 describe('modèle imposé côté serveur', () => {
   it('accepte les deux modèles autorisés', () => {
     assert.equal(
-      resolveChatModel('anthropic/claude-sonnet-4.5'),
-      'anthropic/claude-sonnet-4.5',
+      resolveChatModel('anthropic/claude-sonnet-5.5'),
+      'anthropic/claude-sonnet-5.5',
     );
     assert.equal(resolveChatModel('openai/gpt-5.6-sol'), 'openai/gpt-5.6-sol');
   });
@@ -51,11 +52,21 @@ describe('modèle imposé côté serveur', () => {
     for (const demande of [
       'anthropic/claude-opus-4.1',
       'anthropic/claude-sonnet-5',
+      'anthropic/claude-sonnet-4.5',
       'google/gemini-3.1-pro-preview',
       '',
       undefined,
     ]) {
-      assert.equal(resolveChatModel(demande), 'anthropic/claude-sonnet-4.5');
+      assert.equal(resolveChatModel(demande), 'anthropic/claude-sonnet-5.5');
     }
+  });
+});
+
+describe('appel direct Anthropic', () => {
+  it("convertit l'identifiant OpenRouter en identifiant API Anthropic", () => {
+    assert.equal(
+      directAnthropicModelId('anthropic/claude-sonnet-5.5'),
+      'claude-sonnet-5-5',
+    );
   });
 });
