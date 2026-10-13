@@ -1279,7 +1279,9 @@ export async function handleAiChatRequest(req: Request) {
     // parts on the SSE stream — never logged, never visible in
     // production. This is the primary observability hook for "the model
     // call failed and I have no idea why".
-    onError: ({ error }) => {
+    // Awaited by streamText (unlike the UI stream's onError): the refund
+    // must finish before the serverless response closes.
+    onError: async ({ error }) => {
       logError(error, {
         functionName: 'ai-chat',
         statusCode: 500,
@@ -1290,7 +1292,7 @@ export async function handleAiChatRequest(req: Request) {
           operation: 'stream_text',
         },
       });
-      void refundReservation('stream_text_error');
+      await refundReservation('stream_text_error');
     },
   });
 
