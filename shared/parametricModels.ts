@@ -52,3 +52,13 @@ export function resolveChatModel(requested: string | null | undefined): string {
 export function directAnthropicModelId(modelId: string): string {
   return modelId.replace(/^anthropic\//, '').replace(/\./g, '-');
 }
+
+/**
+ * Premier tour paramétrique : on oblige le modèle à passer par un outil
+ * (build_parametric_model ou answer_user). Claude Sonnet 5.5 refuse ce
+ * forçage (tool_choice "any" non supporté) : on le laisse choisir, le
+ * prompt système impose déjà l'outil.
+ */
+export function firstStepToolChoice(modelId: string): 'auto' | 'required' {
+  return modelId.startsWith('anthropic/') ? 'auto' : 'required';
+}

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   directAnthropicModelId,
+  firstStepToolChoice,
   PRIMARY_PARAMETRIC_MODEL,
   FALLBACK_PARAMETRIC_MODEL,
   openRouterModelsFor,
@@ -68,5 +69,18 @@ describe('appel direct Anthropic', () => {
       directAnthropicModelId('anthropic/claude-sonnet-5.5'),
       'claude-sonnet-5-5',
     );
+  });
+});
+
+// 13/10/2026 : Claude Sonnet 5.5 refuse tool_choice "any"/"tool"
+// (« not supported for this model ») ; chaque appel retombait en silence
+// sur GPT-5.6 Sol.
+describe('choix d’outil au premier tour', () => {
+  it('les modèles Claude choisissent eux-mêmes leur outil', () => {
+    assert.equal(firstStepToolChoice('anthropic/claude-sonnet-5.5'), 'auto');
+  });
+
+  it('les autres modèles restent obligés de prendre un outil', () => {
+    assert.equal(firstStepToolChoice('openai/gpt-5.6-sol'), 'required');
   });
 });

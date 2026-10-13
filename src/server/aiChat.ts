@@ -19,6 +19,7 @@ import {
   openRouterModelsFor,
   resolveChatModel,
   directAnthropicModelId,
+  firstStepToolChoice,
 } from '@shared/parametricModels';
 import type { Conversation, Message, MeshFileType, Model } from '@shared/types';
 import {
@@ -1205,7 +1206,8 @@ export async function handleAiChatRequest(req: Request) {
         ? {
             // Parametric user turns must take one structured path first:
             // either create/update CAD or explicitly answer normally.
-            toolChoice: 'required',
+            // Claude refuse le forçage : voir firstStepToolChoice.
+            toolChoice: firstStepToolChoice(actualModelId),
           }
         : {},
     stopWhen: stepCountIs(5),
