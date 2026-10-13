@@ -21,8 +21,10 @@ create unique index if not exists cadam_credit_tx_reason_ref_uniq
 alter table public.cadam_credits enable row level security;
 alter table public.cadam_credit_transactions enable row level security;
 -- Lecture de SON solde uniquement ; écritures = service_role/RPC SECURITY DEFINER
+drop policy if exists "read own balance" on public.cadam_credits;
 create policy "read own balance" on public.cadam_credits
   for select using (auth.uid() = user_id);
+drop policy if exists "read own tx" on public.cadam_credit_transactions;
 create policy "read own tx" on public.cadam_credit_transactions
   for select using (auth.uid() = user_id);
 

@@ -7,8 +7,9 @@ import { pickGoogleApiKey, reportGoogleFailure } from './googlePool';
 import { pickModel, reportModelFailure } from './modelPool';
 import {
   assertCreditsAvailable,
-  consumeCredits,
   InsufficientCreditsError,
+  refundCredits,
+  reserveCredits,
 } from './credits';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
@@ -982,8 +983,8 @@ export async function handleAiChatRequest(req: Request) {
   }
 
   // clic3d-cadam: credit gate — every generation costs 20 credits.
-  // Pre-call is read-only — the actual debit lives in streamText.onFinish so
-  // that rate-limited or errored generations don't burn the user's balance.
+  // Fast read-only pre-check (cheap 402 before loading the branch); the
+  // credits are actually reserved just before streamText, refunded on error.
   try {
     const balance = await assertCreditsAvailable(user.id, creditsClient);
     console.log(`[clic3d-credits] precheck user=${user.id} balance=${balance}`);
@@ -1192,6 +1193,60 @@ export async function handleAiChatRequest(req: Request) {
     thinking: rawBody.thinking ?? false,
   };
 
+  // clic3d-cadam: the 20 credits are RESERVED here, before the model runs, so
+  // a failing debit can never hand out a free generation. They are given back
+  // (refundCredits, idempotent) if the model errors or produces nothing.
+  // Continuations (leaf = assistant: the client posting back a compiled tool
+  // result) belong to the turn already paid for — no reservation.
+  const creditRef = leafRole === 'user' ? `gen-${crypto.randomUUID()}` : null;
+  if (creditRef) {
+    try {
+      const balance = await reserveCredits(user.id, creditsClient, creditRef);
+      console.log(
+        `[clic3d-credits] reserved user=${user.id} -20 balance=${balance} ref=${creditRef}`,
+      );
+    } catch (error) {
+      if (error instanceof InsufficientCreditsError) {
+        return jsonResponse(
+          {
+            error: 'insufficient_credits',
+            balance: error.balance,
+            needed: error.needed,
+          },
+          402,
+        );
+      }
+      logError(error, {
+        functionName: 'ai-chat',
+        statusCode: 503,
+        userId: user.id,
+        conversationId: conversation.id,
+        additionalContext: { operation: 'credits_reserve' },
+      });
+      return jsonResponse({ error: 'Credits service unavailable' }, 503);
+    }
+  }
+  let creditsRefunded = false;
+  const refundReservation = async (why: string) => {
+    if (!creditRef || creditsRefunded) return;
+    creditsRefunded = true;
+    try {
+      const balance = await refundCredits(user.id, creditsClient, creditRef);
+      console.log(
+        `[clic3d-credits] refunded user=${user.id} +20 balance=${balance} ref=${creditRef} (${why})`,
+      );
+    } catch (refundErr) {
+      creditsRefunded = false;
+      logError(refundErr, {
+        functionName: 'ai-chat',
+        statusCode: 500,
+        userId: user.id,
+        conversationId: conversation.id,
+        additionalContext: { operation: 'credits_refund', ref: creditRef, why },
+      });
+    }
+  };
+
   const result = streamText({
     model: chatLanguageModel,
     providerOptions: chatProviderOptions,
@@ -1235,6 +1290,7 @@ export async function handleAiChatRequest(req: Request) {
           operation: 'stream_text',
         },
       });
+      void refundReservation('stream_text_error');
     },
   });
 
@@ -1277,6 +1333,7 @@ export async function handleAiChatRequest(req: Request) {
           operation: 'ui_message_stream',
         },
       });
+      void refundReservation('ui_message_stream_error');
       return userFacingModelError(error);
     },
     execute: async ({ writer }) => {
@@ -1333,55 +1390,21 @@ export async function handleAiChatRequest(req: Request) {
               responseMessage.parts,
             );
 
-            // clic3d-cadam: debit 20 credits EXACTLY ONCE per
-            // user-initiated turn. A single user prompt fans out into
-            // several requests to this handler: the model emits text +
-            // a client tool call (`build_parametric_model`), the client
-            // compiles the SCAD and POSTs the result back, and that
-            // round-trip re-enters here as a CONTINUATION. Those
-            // continuations are separate HTTP requests, so we can't
-            // dedupe in memory — instead we gate on `!isContinuation`,
-            // which is true only for the initial response of the turn.
-            // (Counting every onFinish burned 2–5 generations per real
-            // prompt — the "2 uses → 10/10" bug.)
-            //
-            // We still require the initial turn to have actually
-            // generated something — text, reasoning, OR a tool call the
-            // client will run (a pending `input-available` tool part
-            // still means the model produced a real generation) — so a
-            // genuinely empty finish doesn't burn credits. `onFinish`
-            // already only fires on success; LLM errors take `onError`.
-            // DB errors here are logged but never bubble — credit
-            // bookkeeping must not break the response.
+            // clic3d-cadam: the 20 credits were reserved before the call
+            // (initial user turn only — continuations are the client
+            // posting back a compiled tool result, already paid for). If
+            // the initial turn produced nothing — no text, no reasoning, no
+            // tool call (a pending `input-available` tool part still counts:
+            // the model ran and chose a tool) — the reservation is given back.
             const generatedSomething = finalizedParts.some((part) => {
               if (part.type === 'text' || part.type === 'reasoning') {
                 const text = (part as { text?: string }).text;
                 return typeof text === 'string' && text.trim().length > 0;
               }
-              // Any tool part on the initial turn — including one still
-              // awaiting the client (`input-available`) — counts: the
-              // model ran and decided to call a tool.
               return part.type.startsWith('tool-');
             });
-            if (!isContinuation && generatedSomething) {
-              try {
-                const balance = await consumeCredits(
-                  user.id,
-                  creditsClient,
-                  responseMessage.id,
-                );
-                console.log(
-                  `[clic3d-credits] consumed user=${user.id} -20 balance=${balance}`,
-                );
-              } catch (creditErr) {
-                logError(creditErr, {
-                  functionName: 'ai-chat',
-                  statusCode: 500,
-                  userId: user.id,
-                  conversationId: conversation.id,
-                  additionalContext: { operation: 'credits_consume' },
-                });
-              }
+            if (!isContinuation && !generatedSomething) {
+              await refundReservation('empty_generation');
             }
 
             const serializedMessage = {

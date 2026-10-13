@@ -33,8 +33,13 @@ export async function assertCreditsAvailable(
   return balance;
 }
 
-/** Deduct on success path. `ref` = message id for idempotency. Returns new balance. */
-export async function consumeCredits(
+/**
+ * Reserve PREMIUM_COST before the model call (atomic, serialized per user in
+ * the `consume_credits` RPC). `ref` identifies the reservation for
+ * idempotency and for `refundCredits`. Throws InsufficientCreditsError when the
+ * balance no longer covers the cost. Returns the new balance.
+ */
+export async function reserveCredits(
   userId: string,
   sb: SupabaseClient,
   ref: string,
@@ -42,6 +47,27 @@ export async function consumeCredits(
   const { data, error } = await sb.rpc('consume_credits', {
     uid: userId,
     amount: PREMIUM_COST,
+    p_reason: 'premium_generation',
+    p_ref: ref,
+  });
+  if (error) {
+    if (/insufficient_credits/.test(error.message ?? '')) {
+      const balance = await getBalance(userId, sb).catch(() => 0);
+      throw new InsufficientCreditsError(balance, PREMIUM_COST);
+    }
+    throw error;
+  }
+  return (data as number) ?? 0;
+}
+
+/** Give back a reservation (failed or empty generation). Idempotent per `ref`. */
+export async function refundCredits(
+  userId: string,
+  sb: SupabaseClient,
+  ref: string,
+): Promise<number> {
+  const { data, error } = await sb.rpc('refund_credits', {
+    uid: userId,
     p_reason: 'premium_generation',
     p_ref: ref,
   });
