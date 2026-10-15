@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   directAnthropicModelId,
   firstStepToolChoice,
+  maxOutputTokensFor,
   PRIMARY_PARAMETRIC_MODEL,
   FALLBACK_PARAMETRIC_MODEL,
   openRouterModelsFor,
@@ -82,5 +83,19 @@ describe('choix d’outil au premier tour', () => {
 
   it('les autres modèles restent obligés de prendre un outil', () => {
     assert.equal(firstStepToolChoice('openai/gpt-5.6-sol'), 'required');
+  });
+});
+
+// 15/10/2026 : Sonnet 5.5 réfléchit de lui-même ; sur le coffret de pied
+// à coulisse, sa réflexion a rempli les 16 000 jetons et aucune pièce n'est
+// sortie (0,17 $ perdus, client remboursé).
+describe('place laissée à la réponse', () => {
+  it('Claude a de quoi réfléchir puis écrire la pièce', () => {
+    assert.equal(maxOutputTokensFor('anthropic/claude-sonnet-5.5', false), 32000);
+  });
+
+  it('les autres modèles gardent leurs limites', () => {
+    assert.equal(maxOutputTokensFor('openai/gpt-5.6-sol', false), 16000);
+    assert.equal(maxOutputTokensFor('openai/gpt-5.6-sol', true), 20000);
   });
 });

@@ -62,3 +62,14 @@ export function directAnthropicModelId(modelId: string): string {
 export function firstStepToolChoice(modelId: string): 'auto' | 'required' {
   return modelId.startsWith('anthropic/') ? 'auto' : 'required';
 }
+
+/**
+ * Plafond de sortie (réflexion comprise). Claude Sonnet 5.5 réfléchit de
+ * lui-même avant d'écrire : à 16 000 jetons, une pièce complexe pouvait
+ * épuiser la place en réflexion et ne rien livrer. On privilégie un fichier
+ * juste à la vitesse.
+ */
+export function maxOutputTokensFor(modelId: string, thinking: boolean): number {
+  if (modelId.startsWith('anthropic/')) return 32000;
+  return thinking ? 20000 : 16000;
+}

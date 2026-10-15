@@ -21,6 +21,7 @@ import {
   resolveChatModel,
   directAnthropicModelId,
   firstStepToolChoice,
+  maxOutputTokensFor,
 } from '@shared/parametricModels';
 import type { Conversation, Message, MeshFileType, Model } from '@shared/types';
 import {
@@ -1266,7 +1267,7 @@ export async function handleAiChatRequest(req: Request) {
           }
         : {},
     stopWhen: stepCountIs(5),
-    maxOutputTokens: rawBody.thinking ? 20000 : 16000,
+    maxOutputTokens: maxOutputTokensFor(actualModelId, rawBody.thinking ?? false),
     abortSignal: req.signal,
     // Decouple our render cadence from the provider's native chunking.
     // OpenRouter (and the underlying provider) sometimes emits text in
