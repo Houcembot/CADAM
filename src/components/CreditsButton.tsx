@@ -16,7 +16,7 @@ function formatCompact(n: number): string {
 
 // clic3d-cadam: a simple, non-interactive credit balance pill. The upstream
 // hover popover (plans in dollars, "Upgrade", "View plans" -> /subscription)
-// is removed — clic3d sells credit packs via the parent site (/recharge), not
+// is removed — clic3d sells credit packs via the parent site (/ia), not
 // an in-app dollar subscription.
 export function CreditsButton() {
   const { user, billing } = useAuth();
@@ -24,7 +24,7 @@ export function CreditsButton() {
   if (!user) return null;
   return (
     <div
-      aria-label="Crédits"
+      aria-label="Tokens"
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full',
         'bg-adam-neutral-950 px-3 py-1.5 text-sm font-medium',
@@ -32,7 +32,7 @@ export function CreditsButton() {
       )}
     >
       <Zap className="h-3.5 w-3.5" fill="currentColor" />
-      <span>{formatCompact(credits)} crédits</span>
+      <span>{formatCompact(credits)} tokens</span>
     </div>
   );
 }
