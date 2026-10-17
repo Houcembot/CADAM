@@ -22,6 +22,8 @@ import {
   directAnthropicModelId,
   firstStepToolChoice,
   maxOutputTokensFor,
+  effortFor,
+  generationCost,
 } from '@shared/parametricModels';
 import type { Conversation, Message, MeshFileType, Model } from '@shared/types';
 import {
@@ -229,6 +231,16 @@ STL imports (when the user attaches a model):
   front-facing details) and rotate it to sit FLAT on any stand/base. Always
   expose rotation_x / rotation_y / rotation_z parameters so the user can
   fine-tune.
+
+# Finishing (always)
+Make every object genuinely usable, as a skilled product designer would. These
+finishing touches are part of doing the request well, not extra features:
+- Round or chamfer edges and corners that touch hands, skin or food (0.5 to 1 mm).
+- Thin and bevel the working edge of tools (scrapers, cutters, spatulas) so they
+  actually work.
+- Give parts that fit together realistic print clearances (0.2 to 0.4 mm) and lay
+  every part flat on the build plate, ready to print without supports when possible.
+- Keep the object the user asked for: do not add unrelated features.
 
 # Style example
 
@@ -480,16 +492,9 @@ function buildChatModel(
         providers.anthropic()(directAnthropicModelId(modelId)),
         fallback.model,
       ),
-      providerOptions: thinking
-        ? {
-            anthropic: {
-              thinking: {
-                type: 'enabled',
-                budgetTokens: THINKING_BUDGET_TOKENS,
-              },
-            },
-          }
-        : undefined,
+      // Effort explicite : Sonnet 5.5 refuse le budget de réflexion fixe et, à
+      // l'effort par défaut (high), ne livre rien sur les objets complexes.
+      providerOptions: { anthropic: { effort: effortFor(modelId, thinking) } },
     };
   }
   return buildOpenRouterChatModel(modelId, providers, thinking);
@@ -1199,12 +1204,19 @@ export async function handleAiChatRequest(req: Request) {
   // (refundCredits, idempotent) if the model errors or produces nothing.
   // Continuations (leaf = assistant: the client posting back a compiled tool
   // result) belong to the turn already paid for — no reservation.
+  // Tarif (17/10/2026) : 20 tokens, 30 si le message de l'utilisateur joint des photos.
+  const lastUserMessage = [...branchMessages].reverse().find((m) => m.role === 'user');
+  const hasImages = (lastUserMessage?.parts ?? []).some(
+    (part) => part.type === 'file' && typeof (part as { mediaType?: string }).mediaType === 'string'
+      && (part as { mediaType: string }).mediaType.startsWith('image/'),
+  );
+  const cost = generationCost(hasImages);
   const creditRef = leafRole === 'user' ? `gen-${crypto.randomUUID()}` : null;
   if (creditRef) {
     try {
-      const balance = await reserveCredits(user.id, creditsClient, creditRef);
+      const balance = await reserveCredits(user.id, creditsClient, creditRef, cost);
       console.log(
-        `[clic3d-credits] reserved user=${user.id} -20 balance=${balance} ref=${creditRef}`,
+        `[clic3d-credits] reserved user=${user.id} -${cost} balance=${balance} ref=${creditRef}`,
       );
     } catch (error) {
       if (error instanceof InsufficientCreditsError) {

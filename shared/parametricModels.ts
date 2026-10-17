@@ -73,3 +73,23 @@ export function maxOutputTokensFor(modelId: string, thinking: boolean): number {
   if (modelId.startsWith('anthropic/')) return 32000;
   return thinking ? 20000 : 16000;
 }
+
+/**
+ * Effort de réflexion (output_config.effort) pour Claude. Sonnet 5.5 réfléchit
+ * toujours de façon adaptative : sans effort explicite il tourne en « high » et,
+ * sur un objet complexe, remplit le plafond de sortie de réflexion sans livrer
+ * de code (banc du 17/10/2026). « low » livre en 10-50 s ; l'option réflexion
+ * passe à « medium ». Le budget fixe (thinking.enabled) est refusé par ce modèle.
+ */
+export function effortFor(
+  modelId: string,
+  thinking: boolean,
+): 'low' | 'medium' | undefined {
+  if (!modelId.startsWith('anthropic/')) return undefined;
+  return thinking ? 'medium' : 'low';
+}
+
+/** Prix d'une génération en tokens clic3d : 20, ou 30 avec photos jointes (17/10/2026). */
+export function generationCost(hasImages: boolean): number {
+  return hasImages ? 30 : 20;
+}

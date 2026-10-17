@@ -43,17 +43,18 @@ export async function reserveCredits(
   userId: string,
   sb: SupabaseClient,
   ref: string,
+  amount: number = PREMIUM_COST,
 ): Promise<number> {
   const { data, error } = await sb.rpc('consume_credits', {
     uid: userId,
-    amount: PREMIUM_COST,
+    amount,
     p_reason: 'premium_generation',
     p_ref: ref,
   });
   if (error) {
     if (/insufficient_credits/.test(error.message ?? '')) {
       const balance = await getBalance(userId, sb).catch(() => 0);
-      throw new InsufficientCreditsError(balance, PREMIUM_COST);
+      throw new InsufficientCreditsError(balance, amount);
     }
     throw error;
   }
