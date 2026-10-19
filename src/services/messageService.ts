@@ -61,18 +61,33 @@ export async function persistAssistantParts({
   // output), leaving the existing metadata untouched.
   metadata?: AppUIMessage['metadata'];
 }) {
-  const { error } = await supabase
-    .from('messages')
-    .update({
-      parts: JSON.parse(JSON.stringify(parts)),
-      ...(metadata !== undefined
-        ? { metadata: JSON.parse(JSON.stringify(metadata)) }
-        : {}),
-    })
-    .eq('id', messageId)
-    .eq('conversation_id', conversationId);
-  if (error) throw error;
+  // clic3d (19/10/2026) : la ligne du message assistant n'est insérée qu'en fin
+  // de flux ; une mise à jour faite avant ne touchait aucune ligne, sans erreur,
+  // et le résultat de l'outil était perdu. On vérifie le nombre de lignes et on
+  // réessaie jusqu'à ce que la ligne existe.
+  for (let attempt = 0; attempt < PERSIST_ATTEMPTS; attempt++) {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({
+        parts: JSON.parse(JSON.stringify(parts)),
+        ...(metadata !== undefined
+          ? { metadata: JSON.parse(JSON.stringify(metadata)) }
+          : {}),
+      })
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId)
+      .select('id');
+    if (error) throw error;
+    if (data && data.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, PERSIST_RETRY_MS));
+  }
+  throw new Error(
+    `Message ${messageId} introuvable : résultat de l'outil non enregistré`,
+  );
 }
+
+const PERSIST_ATTEMPTS = 20;
+const PERSIST_RETRY_MS = 500;
 
 export const useMessagesQuery = () => {
   const { conversation } = useConversation();

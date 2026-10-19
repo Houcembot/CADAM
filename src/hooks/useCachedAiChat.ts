@@ -1,6 +1,7 @@
 import { Chat } from '@ai-sdk/react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { AppUIMessage } from '@shared/chatAi';
+import { createToolCallRelay, type ToolCallRelay } from './toolCallRelay';
 
 const MAX_CACHE_SIZE = 10;
 
@@ -15,6 +16,27 @@ type CallbackRefs = {
 };
 
 const callbackRefs = new Map<string, CallbackRefs>();
+
+// clic3d (19/10/2026) : un relais par conversation, voir toolCallRelay.ts.
+type ToolCallCtx = Parameters<NonNullable<ReactChatInit['onToolCall']>>[0];
+const toolCallRelays = new Map<string, ToolCallRelay<ToolCallCtx>>();
+
+function relayFor(id: string): ToolCallRelay<ToolCallCtx> {
+  let relay = toolCallRelays.get(id);
+  if (!relay) {
+    relay = createToolCallRelay<ToolCallCtx>();
+    toolCallRelays.set(id, relay);
+  }
+  return relay;
+}
+
+/** Vrai si cet appel d'outil est pris en charge dans la session courante. */
+export function isToolCallInFlight(
+  chatId: string,
+  toolCallId: string,
+): boolean {
+  return toolCallRelays.get(chatId)?.isInFlight(toolCallId) ?? false;
+}
 
 function refsFor(id: string): CallbackRefs {
   let refs = callbackRefs.get(id);
@@ -46,6 +68,7 @@ function evictIfNeeded() {
     if (result.done) break;
     chatCache.delete(result.value);
     callbackRefs.delete(result.value);
+    toolCallRelays.delete(result.value);
   }
 }
 
@@ -74,6 +97,9 @@ export function useCachedAiChat({
     refs.onFinish.current = onFinish;
     refs.onData.current = onData;
     refs.onToolCall.current = onToolCall;
+    relayFor(id).setHandler(
+      onToolCall ? (ctx) => refs.onToolCall.current?.(ctx) : undefined,
+    );
   });
 
   return useMemo(() => {
@@ -92,7 +118,10 @@ export function useCachedAiChat({
       onError: (error) => refs.onError.current?.(error),
       onFinish: (ctx) => refs.onFinish.current?.(ctx),
       onData: (ctx) => refs.onData.current?.(ctx),
-      onToolCall: (ctx) => refs.onToolCall.current?.(ctx),
+      onToolCall: (ctx) =>
+        relayFor(id).dispatch(ctx) as ReturnType<
+          NonNullable<ReactChatInit['onToolCall']>
+        >,
     });
 
     chatCache.set(id, chat);
@@ -117,7 +146,10 @@ export function createAndCacheAiChat(
     onError: (error) => refs.onError.current?.(error),
     onFinish: (ctx) => refs.onFinish.current?.(ctx),
     onData: (ctx) => refs.onData.current?.(ctx),
-    onToolCall: (ctx) => refs.onToolCall.current?.(ctx),
+    onToolCall: (ctx) =>
+      relayFor(id).dispatch(ctx) as ReturnType<
+        NonNullable<ReactChatInit['onToolCall']>
+      >,
   });
 
   chatCache.set(id, chat);

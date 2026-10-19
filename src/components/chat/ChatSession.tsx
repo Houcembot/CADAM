@@ -3,7 +3,7 @@ import { SuggestionPills } from '@/components/chat/SuggestionPills';
 import TextAreaChat from '@/components/TextAreaChat';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCachedAiChat } from '@/hooks/useCachedAiChat';
+import { useCachedAiChat, isToolCallInFlight } from '@/hooks/useCachedAiChat';
 import { useToast } from '@/hooks/use-toast';
 import { previewScadColoredViaToolWorker } from '@/worker/toolWorker';
 import { apiUrl } from '@/services/api';
@@ -481,7 +481,10 @@ export function ChatSession({
       const nextParts = msg.parts.map((p) => {
         if (
           p.type === 'tool-build_parametric_model' &&
-          (p.state === 'input-streaming' || p.state === 'input-available')
+          (p.state === 'input-streaming' || p.state === 'input-available') &&
+          // clic3d (19/10/2026) : un appel arrivé avant l'éditeur est rejoué par
+          // le relais dans cette session — ce n'est pas une session précédente.
+          !isToolCallInFlight(conversation.id, p.toolCallId)
         ) {
           dirty = true;
           return {
@@ -518,7 +521,7 @@ export function ChatSession({
         console.warn('Failed to persist stuck-tool recovery:', err);
       });
     }
-  }, [chat, onToolOutput, setMessages]);
+  }, [chat, conversation.id, onToolOutput, setMessages]);
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
