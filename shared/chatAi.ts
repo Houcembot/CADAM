@@ -40,7 +40,7 @@ export const chatTools = {
   }),
   answer_user: tool({
     description:
-      'Reply normally when the user is not asking to create, update, or fix a CAD model.',
+      'Reply without building a model: greetings and information, or ONE clarifying question (with a default the user can accept) when the request is not clear enough to build the right part — missing dimensions, ambiguity, or an object outside parametric CAD.',
     inputSchema: answerUserSchema,
     outputSchema: answerUserSchema,
   }),
