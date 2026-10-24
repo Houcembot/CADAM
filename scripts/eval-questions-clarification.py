@@ -67,10 +67,12 @@ SCENARIOS = [
 
 ok = 0
 for nom, attendu, msgs in SCENARIOS:
-    r = client.messages.create(
+    # Même plafond que la prod (32 000) : le SDK impose le streaming au-delà de ~16 000.
+    with client.messages.stream(
         model="claude-sonnet-5-5", max_tokens=32000, system=system, tools=tools,
         tool_choice={"type": "auto"}, output_config={"effort": "low"}, messages=msgs,
-    )
+    ) as flux:
+        r = flux.get_final_message()
     outils = [b for b in r.content if b.type == "tool_use"]
     texte = " ".join(b.text for b in r.content if b.type == "text")
     obtenu = "build" if any(b.name == "build_parametric_model" for b in outils) else "question" if any(b.name == "answer_user" for b in outils) else "texte libre"
