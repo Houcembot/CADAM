@@ -12,7 +12,10 @@ m = re.search(r"const PARAMETRIC_AGENT_PROMPT = `(.*?)`;\n", src, re.S)
 system = m.group(1).replace("\\`", "`")
 assert "${" not in system, "le prompt contient une interpolation"
 
-cle = [l.strip() for l in open(os.path.expanduser("~/.botfleet/porte-cle/api-keys.env")) if l.strip()][33]
+# La clé « claude voxel3ds » est seule sur sa ligne (sans NOM=) : on la repère par son préfixe.
+cles = [l.strip() for l in open(os.path.expanduser("~/.botfleet/porte-cle/api-keys.env")) if l.strip().startswith("sk-ant-usr-")]
+assert len(cles) == 1, f"{len(cles)} clés sk-ant-usr trouvées (attendu : 1)"
+cle = cles[0]
 client = anthropic.Anthropic(api_key=cle)
 
 tools = [
