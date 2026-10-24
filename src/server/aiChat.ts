@@ -11,6 +11,7 @@ import {
   refundCredits,
   reserveCredits,
 } from './credits';
+import { shouldRefundGeneration } from './generationRefund';
 import { chatTools, type AppUIMessage, type AppTools } from '@shared/chatAi';
 import { getParametricText } from '@shared/parametricParts';
 import { imageIdFromFilename, imageStoragePath } from '@shared/imageRefs';
@@ -1205,16 +1206,25 @@ export async function handleAiChatRequest(req: Request) {
   // Continuations (leaf = assistant: the client posting back a compiled tool
   // result) belong to the turn already paid for — no reservation.
   // Tarif (17/10/2026) : 20 tokens, 30 si le message de l'utilisateur joint des photos.
-  const lastUserMessage = [...branchMessages].reverse().find((m) => m.role === 'user');
+  const lastUserMessage = [...branchMessages]
+    .reverse()
+    .find((m) => m.role === 'user');
   const hasImages = (lastUserMessage?.parts ?? []).some(
-    (part) => part.type === 'file' && typeof (part as { mediaType?: string }).mediaType === 'string'
-      && (part as { mediaType: string }).mediaType.startsWith('image/'),
+    (part) =>
+      part.type === 'file' &&
+      typeof (part as { mediaType?: string }).mediaType === 'string' &&
+      (part as { mediaType: string }).mediaType.startsWith('image/'),
   );
   const cost = generationCost(hasImages);
   const creditRef = leafRole === 'user' ? `gen-${crypto.randomUUID()}` : null;
   if (creditRef) {
     try {
-      const balance = await reserveCredits(user.id, creditsClient, creditRef, cost);
+      const balance = await reserveCredits(
+        user.id,
+        creditsClient,
+        creditRef,
+        cost,
+      );
       console.log(
         `[clic3d-credits] reserved user=${user.id} -${cost} balance=${balance} ref=${creditRef}`,
       );
@@ -1279,7 +1289,10 @@ export async function handleAiChatRequest(req: Request) {
           }
         : {},
     stopWhen: stepCountIs(5),
-    maxOutputTokens: maxOutputTokensFor(actualModelId, rawBody.thinking ?? false),
+    maxOutputTokens: maxOutputTokensFor(
+      actualModelId,
+      rawBody.thinking ?? false,
+    ),
     abortSignal: req.signal,
     // Decouple our render cadence from the provider's native chunking.
     // OpenRouter (and the underlying provider) sometimes emits text in
@@ -1405,21 +1418,13 @@ export async function handleAiChatRequest(req: Request) {
               responseMessage.parts,
             );
 
-            // clic3d-cadam: the 20 credits were reserved before the call
+            // clic3d-cadam: the credits were reserved before the call
             // (initial user turn only — continuations are the client
-            // posting back a compiled tool result, already paid for). If
-            // the initial turn produced nothing — no text, no reasoning, no
-            // tool call (a pending `input-available` tool part still counts:
-            // the model ran and chose a tool) — the reservation is given back.
-            const generatedSomething = finalizedParts.some((part) => {
-              if (part.type === 'text' || part.type === 'reasoning') {
-                const text = (part as { text?: string }).text;
-                return typeof text === 'string' && text.trim().length > 0;
-              }
-              return part.type.startsWith('tool-');
-            });
-            if (!isContinuation && !generatedSomething) {
-              await refundReservation('empty_generation');
+            // posting back a compiled tool result, already paid for). They
+            // are given back if the turn produced nothing or if every tool
+            // it called failed (see shouldRefundGeneration).
+            if (!isContinuation && shouldRefundGeneration(finalizedParts)) {
+              await refundReservation('no_generation');
             }
 
             const serializedMessage = {

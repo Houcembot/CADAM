@@ -38,6 +38,10 @@ const EXTENSION_PILLS: ReadonlyArray<{
   label: string;
 }> = [];
 
+// clic3d-cadam (22/10/2026) : mode créatif (create_mesh via fal) masqué — FAL_KEY
+// vide en prod, chaque essai échouait. Repasser à true une fois la clé posée.
+const CREATIVE_MODE_ENABLED = false;
+
 export function PromptView() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -303,7 +307,9 @@ export function PromptView() {
                   setModel={setModel}
                   showPromptGenerator={true}
                   showFullLabels={true}
-                  onTypeChange={handleTypeChange}
+                  onTypeChange={
+                    CREATIVE_MODE_ENABLED ? handleTypeChange : undefined
+                  }
                 />
               </SelectedItemsContext.Provider>
               <div className="relative">
