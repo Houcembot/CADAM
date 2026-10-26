@@ -39,6 +39,13 @@ describe('prompt cadam — questions de clarification', () => {
     assert.match(prompt, /organic figures/i);
   });
 
+  // 26/10 : banc interne, figurine Jett construite sans prévenir que c'était
+  // une version simplifiée (seul le titre le disait).
+  it('annonce la version simplifiée quand il construit une figurine', () => {
+    assert.match(prompt, /When you build a simplified version/i);
+    assert.match(prompt, /say so in your reply/i);
+  });
+
   it("l'outil answer_user annonce la question de clarification", () => {
     assert.match(tools, /clarifying question/i);
   });

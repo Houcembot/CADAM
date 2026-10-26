@@ -10,6 +10,7 @@ import {
 } from './types';
 import OpenSCADError from '@/lib/OpenSCADError';
 import { libraries } from '@/lib/libraries.ts';
+import { poserSurPlateau } from './plateau.ts';
 
 const fontsConf = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
@@ -139,7 +140,23 @@ class OpenSCADWrapper {
     parameters.push(`--enable=fast-csg`);
     parameters.push(`--enable=lazy-union`);
 
-    return await this.executeOpenscad(data.code, data.fileType, parameters);
+    return this.poser(
+      await this.executeOpenscad(data.code, data.fileType, parameters),
+    );
+  }
+
+  // Aperçu et téléchargement : la pièce est posée sur le plateau (z min = 0).
+  poser(r: OpenSCADWorkerResponseData): OpenSCADWorkerResponseData {
+    if (r.fileType !== 'stl' || !r.output) return r;
+    const posee = poserSurPlateau(r.output, r.extraOutputs?.off);
+    if (posee.dz === 0) return r;
+    return {
+      ...r,
+      output: posee.stl,
+      extraOutputs: posee.off
+        ? { ...r.extraOutputs, off: posee.off }
+        : r.extraOutputs,
+    };
   }
 
   /**
@@ -228,7 +245,7 @@ class OpenSCADWrapper {
       render.log.stdOut.push(...svgExport.log.stdOut);
     }
 
-    return render;
+    return this.poser(render);
   }
 
   async writeFile(data: FileSystemWorkerMessageData) {
