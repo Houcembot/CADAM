@@ -1,6 +1,6 @@
 """Banc interne : demandes proches de celles des testeurs, un client simulé répond aux questions,
 jusqu'à la génération ; le code est ensuite compilé avec le wasm de cadam (compile.mjs).
-Même prompt, modèle et effort que la prod. Usage : python3 scripts/banc-ia-testeurs.py src/server/aiChat.ts <dossier sorties>"""
+Même prompt, modèle et effort que la prod. Usage : python3 scripts/banc-ia-testeurs.py src/server/aiChat.ts <dossier sorties> [ids,séparés,par,virgules] [répétitions]"""
 import json, os, re, subprocess, sys, time, concurrent.futures as cf
 import anthropic
 
@@ -36,6 +36,19 @@ SCENARIOS = [
     ("casque", "contrôle", "support casque audio à fixer sous le bureau, plateau de 25 mm d'épaisseur, crochet de 40 mm de large",
      "Client précis. Tout est déjà dans ta demande ; si on te demande autre chose tu dis « comme tu veux »."),
 ]
+
+SCENARIOS += [
+    ("reyna", "Khaled Kaddeche", "generate for me an stl model of a funko pop of reyna from the valorant game make it 4 colors tops and easy to print",
+     "Joueur de Valorant. Tu acceptes une version simplifiée. Réponses courtes en anglais."),
+    ("chat", "client type", "fais moi une figurine de mon chat roux couché, pour mettre sur une étagère",
+     "Cliente non technique. Tu acceptes une version simplifiée, environ 8 cm."),
+]
+# Filtre optionnel : ids séparés par des virgules, puis nombre de répétitions.
+if len(sys.argv) > 3:
+    ids = sys.argv[3].split(",")
+    SCENARIOS = [(f"{s[0]}-{k}",) + s[1:] for s in SCENARIOS if s[0] in ids for k in range(int(sys.argv[4]) if len(sys.argv) > 4 else 1)]
+else:
+    SCENARIOS = SCENARIOS[:8]
 
 def simuler_client(persona, premier, historique, question):
     r = client.messages.create(model="claude-haiku-5-5", max_tokens=2000, system=persona + " Tu joues le client d'un site d'impression 3D qui parle à une IA de conception. Réponds UNIQUEMENT par ton message de client, une ou deux phrases max.",
