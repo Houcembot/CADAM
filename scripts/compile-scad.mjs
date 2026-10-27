@@ -9,6 +9,10 @@ const code = fs.readFileSync(scad, 'utf8')
 const err = []
 const inst = await OpenSCAD({ noInitialRun: true, wasmBinary: fs.readFileSync(path.join(racine, 'src/vendor/openscad-wasm/openscad.wasm')), print: () => {}, printErr: t => err.push(t) })
 inst.FS.mkdir('/libraries')
+// Même police que le worker (sinon text() ne produit rien)
+inst.FS.mkdir('/fonts')
+inst.FS.writeFile('/fonts/fonts.conf', '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd"><fontconfig></fontconfig>')
+inst.FS.writeFile('/fonts/Geist-Regular.ttf', fs.readFileSync(path.join(racine, 'public/Geist-Regular.ttf')))
 const copie = (src, dst) => { for (const f of fs.readdirSync(src)) { const s = path.join(src, f), d = dst + '/' + f; if (fs.statSync(s).isDirectory()) { inst.FS.mkdir(d); copie(s, d) } else inst.FS.writeFile(d, fs.readFileSync(s)) } }
 for (const l of ['BOSL2', 'BOSL', 'MCAD']) if (code.includes(l)) {
   const dir = path.join(os.tmpdir(), 'cadam-libs', l)

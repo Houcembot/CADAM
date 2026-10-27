@@ -26,6 +26,10 @@ describe('prompt cadam — auto-contrôle du rendu', () => {
     assert.match(prompt, /at most one automatic correction/i);
   });
 
+  it('ne parle pas du rendu au client, sauf pour dire ce qui a été corrigé', () => {
+    assert.match(prompt, /never comment on the render itself/i);
+  });
+
   it('le résultat de l’outil annonce le rendu joint', () => {
     assert.match(session, /attached image is a render/i);
   });
