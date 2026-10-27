@@ -328,7 +328,7 @@ export function ChatSession({
         const output = {
           status: 'success' as const,
           message:
-            'Compilation successful. The 3D model is now displayed to the user. The attached image is a render of it: check it against the request.',
+            'Compilation successful. The 3D model is now displayed to the user. The attached image is a render of it, for your own check only: compare it with the request. If a part is missing, floating or detached, rebuild once. Otherwise reply in at most two short sentences, without repeating your earlier description, and never mention it (render, preview, image, view) or what you could check.',
         };
 
         const successPart = {

@@ -40,11 +40,19 @@ describe('prompt cadam — auto-contrôle du rendu', () => {
   it('liste les mots à ne jamais employer sur le rendu', () => {
     assert.match(
       prompt,
-      /never use the words\s+render, preview, image or screenshot/i,
+      /never use the words\s+render, preview, image, view or screenshot/i,
     );
   });
 
   it('le résultat de l’outil annonce le rendu joint', () => {
     assert.match(session, /attached image is a render/i);
+  });
+
+  // Banc du 27/10 : la règle du prompt seule laisse l'IA commenter le rendu
+  // (3/8) ; la consigne est répétée dans le résultat de l'outil, à côté de l'image.
+  it('le résultat de l’outil rappelle : rendu privé, deux phrases', () => {
+    assert.match(session, /for your own check only/i);
+    assert.match(session, /never mention it/i);
+    assert.match(session, /at most two short sentences/i);
   });
 });

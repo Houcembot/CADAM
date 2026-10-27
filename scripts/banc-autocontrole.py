@@ -11,6 +11,11 @@ client = anthropic.Anthropic(api_key=cle)
 tools = [{"name": "build_parametric_model", "description": "Create or update the complete OpenSCAD CAD artifact for the user.",
           "input_schema": {"type": "object", "properties": {"title": {"type": "string"}, "code": {"type": "string"}}, "required": ["title", "code"]}},
          {"name": "answer_user", "description": "Reply without building a model.", "input_schema": {"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"]}}]
+# Comme en prod : la phrase que l'IA écrit avant l'appel de build.
+AVANT = {"jett": "Here's a simplified, printable Jett: a chunky Funko-style figure with a big head, white hair with a ponytail and a blue outfit, in 3 colors. I left out the face and outfit details.",
+         "porte-clé": "Je fais un porte-clé avec « Ahmed » en relief et un trou pour l'anneau.",
+         "coque": "Je fais une coque d'iPhone 13 aux cotes officielles, avec une découpe pour la caméra.",
+         "train": "Je construis le train épicycloïdal : couronne de 80 mm fermée d'un côté, planétaire, 3 satellites et porte-satellite avec axes, posés à plat."}
 CAS = [  # (nom, demande, scad, rendu, attendu)
     ("jett cassée (prod)", "make me a funko pop of jett from valorant, 3 colors max and easy to print", f"{B}/../prod/prod.scad", f"{B}/jett-cassee.png", "corrige"),
     ("jett correcte", "make me a funko pop of jett from valorant, 3 colors max and easy to print", f"{B}/sorties4/jett-0.scad", f"{B}/rendu-jett-0.png", "garde"),
@@ -23,7 +28,7 @@ FILTRE = sys.argv[5] if len(sys.argv) > 5 else ""
 for nom, demande, scad, png, attendu in [c for c in CAS if FILTRE in c[0]]:
     img = base64.b64encode(open(png, "rb").read()).decode()
     msgs = [{"role": "user", "content": demande},
-            {"role": "assistant", "content": [{"type": "tool_use", "id": "toolu_build1", "name": "build_parametric_model", "input": {"title": nom, "code": open(scad).read()}}]},
+            {"role": "assistant", "content": [{"type": "text", "text": AVANT[nom.split()[0]]}, {"type": "tool_use", "id": "toolu_build1", "name": "build_parametric_model", "input": {"title": nom, "code": open(scad).read()}}]},
             {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_build1", "content": [{"type": "text", "text": msg_ok}, {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img}}]}]}]
     for k in range(REP):
         with client.messages.stream(model="claude-sonnet-5-5", max_tokens=32000, system=system, tools=tools, tool_choice={"type": "auto"}, output_config={"effort": "low"}, messages=msgs) as f:
@@ -48,7 +53,7 @@ for nom, demande, scad, png, attendu in [c for c in CAS if FILTRE in c[0]]:
                 texte = " ".join(b.text for b in r2.content if b.type == "text").strip().replace("\n", " ")
                 if any(b.type == "tool_use" and b.name == "build_parametric_model" for b in r2.content): extra += " | ⚠ 2e correction"
         mots = len(texte.split())
-        parle_rendu = bool(re.search(r"\b(render|rendu|preview|aperçu|image|grey|gris)\b", texte, re.I))
+        parle_rendu = bool(re.search(r"\b(render|rendu|preview|aperçu|image|grey|gris|view|vue|screenshot)\b", texte, re.I))
         stats.append((mots, parle_rendu))
         extra += f" | {mots} mots{' | ⚠ parle du rendu' if parle_rendu else ''}"
         total += 1; ok += obtenu == attendu
