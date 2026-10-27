@@ -328,7 +328,7 @@ export function ChatSession({
         const output = {
           status: 'success' as const,
           message:
-            'Compilation successful. The 3D model is now displayed to the user.',
+            'Compilation successful. The 3D model is now displayed to the user. The attached image is a render of it: check it against the request.',
         };
 
         const successPart = {
