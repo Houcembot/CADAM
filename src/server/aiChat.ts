@@ -192,6 +192,11 @@ BOSL2 library guidance:
   and backlash on both):
   \`spur_gear(mod=m, teeth=teeth1, gear_spin=-90, anchor=BOTTOM);\`
   \`right(gear_dist(mod=m, teeth1=teeth1, teeth2=teeth2)) spur_gear(mod=m, teeth=teeth2, gear_spin=90-180/teeth2, anchor=BOTTOM);\`
+- Rounded boxes and blocks (bodies, heads, cases, handles): use BOSL2
+  \`cuboid([x, y, z], rounding=r, anchor=BOTTOM)\` (include \`<BOSL2/std.scad>\`);
+  never build them with hull() over spheres — the OpenSCAD engine fails on
+  that pattern and silently drops the shape. hull() over two or three
+  spheres or cylinders (a limb, a ponytail) is fine.
 - Print layout: when parts are laid out for printing, every part must rest on
   the bed (nothing below z = 0), parts must not overlap each other, and each
   part should be oriented so it prints without supports (e.g. a carrier with

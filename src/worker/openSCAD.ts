@@ -11,6 +11,7 @@ import {
 import OpenSCADError from '@/lib/OpenSCADError';
 import { libraries } from '@/lib/libraries.ts';
 import { poserSurPlateau } from './plateau.ts';
+import { echecCgal } from './echecCgal.ts';
 
 const fontsConf = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
@@ -407,6 +408,9 @@ class OpenSCADWrapper {
         throw new Error('clic3d exited with an error');
       }
     }
+
+    const cgal = exitCode === 0 ? echecCgal(this.log.stdErr) : null;
+    if (cgal) throw new OpenSCADError(cgal, code, this.log.stdErr);
 
     if (exitCode === 0) {
       try {

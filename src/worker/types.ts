@@ -30,10 +30,7 @@ export type WorkerResponseMessage = {
   id: string | number;
   type: WorkerMessageType;
   data:
-    | OpenSCADWorkerResponseData
-    | FileSystemWorkerMessageData
-    | boolean
-    | null;
+    OpenSCADWorkerResponseData | FileSystemWorkerMessageData | boolean | null;
   err?: Error;
 };
 
