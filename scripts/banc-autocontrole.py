@@ -18,7 +18,7 @@ CAS = [  # (nom, demande, scad, rendu, attendu)
     ("coque iphone", "coque iphon 13 avec trou pour camera", f"{B}/sorties5/iphone13.scad", f"{B}/rendu-iphone13.png", "garde"),
     ("train à plat", "train épicycloïdal, couronne 80 mm, 3 satellites, porte-satellite, couronne fermée d'un côté", f"{B}/sorties5/train.scad", f"{B}/rendu-train.png", "garde"),
 ]
-ok = 0; total = 0
+ok = 0; total = 0; stats = []
 FILTRE = sys.argv[5] if len(sys.argv) > 5 else ""
 for nom, demande, scad, png, attendu in [c for c in CAS if FILTRE in c[0]]:
     img = base64.b64encode(open(png, "rb").read()).decode()
@@ -37,6 +37,20 @@ for nom, demande, scad, png, attendu in [c for c in CAS if FILTRE in c[0]]:
             open(out + ".scad", "w").write(build.input["code"])
             c = json.loads(subprocess.run(["node", f"{os.path.dirname(os.path.abspath(__file__))}/compile-scad.mjs", out + ".scad", out + ".stl"], capture_output=True, text=True).stdout.strip().splitlines()[-1])
             extra = f" | recompile rc={c['rc']} triangles={c.get('triangles')} dims={c.get('dims')} cgal={[e for e in c['erreurs'] if 'CGAL' in e][:1]}"
+            # Comme le site : le rendu de la pièce corrigée revient à l'IA, qui écrit sa réponse finale.
+            if c["rc"] == 0 and c.get("triangles"):
+                subprocess.run([sys.executable, f"{os.path.dirname(os.path.abspath(__file__))}/rendu-stl.py", out + ".stl", out + ".png"], capture_output=True)
+                img2 = base64.b64encode(open(out + ".png", "rb").read()).decode()
+                suite = msgs + [{"role": "assistant", "content": [b.model_dump(exclude_none=True) for b in r.content]},
+                                {"role": "user", "content": [{"type": "tool_result", "tool_use_id": build.id, "content": [{"type": "text", "text": msg_ok}, {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img2}}]}]}]
+                with client.messages.stream(model="claude-sonnet-5-5", max_tokens=32000, system=system, tools=tools, tool_choice={"type": "auto"}, output_config={"effort": "low"}, messages=suite) as f2:
+                    r2 = f2.get_final_message()
+                texte = " ".join(b.text for b in r2.content if b.type == "text").strip().replace("\n", " ")
+                if any(b.type == "tool_use" and b.name == "build_parametric_model" for b in r2.content): extra += " | ⚠ 2e correction"
+        mots = len(texte.split())
+        parle_rendu = bool(re.search(r"\b(render|rendu|preview|aperçu|image|grey|gris)\b", texte, re.I))
+        stats.append((mots, parle_rendu))
+        extra += f" | {mots} mots{' | ⚠ parle du rendu' if parle_rendu else ''}"
         total += 1; ok += obtenu == attendu
         print(f"{'✅' if obtenu == attendu else '❌'} {nom} #{k} — attendu {attendu}, obtenu {obtenu} | « {texte[:700]} »{extra}", flush=True)
-print(f"\n{ok}/{total} conformes")
+print(f"\n{ok}/{total} conformes | réponse finale : {sum(m for m, _ in stats) / max(len(stats), 1):.0f} mots en moyenne, max {max([m for m, _ in stats] or [0])} | parle du rendu : {sum(p for _, p in stats)}/{len(stats)}")

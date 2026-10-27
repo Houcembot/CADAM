@@ -26,8 +26,22 @@ describe('prompt cadam — auto-contrôle du rendu', () => {
     assert.match(prompt, /at most one automatic correction/i);
   });
 
-  it('ne parle pas du rendu au client, sauf pour dire ce qui a été corrigé', () => {
-    assert.match(prompt, /never comment on the render itself/i);
+  it('ne dit jamais ce qu’il a pu ou non vérifier', () => {
+    assert.match(prompt, /never\s+say what you could or could not check/i);
+  });
+
+  // 27/10 : vrais essais en prod — réponse finale de 90 mots en moyenne, et
+  // le rendu commenté au client 3 fois sur 10 malgré la règle.
+  it('réponse finale courte, sans répéter la description', () => {
+    assert.match(prompt, /at most two short sentences/i);
+    assert.match(prompt, /do not repeat what\s+you said before the build/i);
+  });
+
+  it('liste les mots à ne jamais employer sur le rendu', () => {
+    assert.match(
+      prompt,
+      /never use the words\s+render, preview, image or screenshot/i,
+    );
   });
 
   it('le résultat de l’outil annonce le rendu joint', () => {
