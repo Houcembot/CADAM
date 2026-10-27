@@ -69,6 +69,13 @@ def lancer(sc):
             open(f"{OUT}/{sid}.scad", "w").write(build.input["code"])
             texte = " ".join(b.text for b in r.content if b.type == "text").strip()
             c = json.loads(subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "compile-scad.mjs"), f"{OUT}/{sid}.scad", f"{OUT}/{sid}.stl"], capture_output=True, text=True, timeout=600).stdout.strip().splitlines()[-1])
+            cgal = next((e.strip() for e in c.get("erreurs", []) if e.strip().startswith("ERROR: CGAL error")), None)
+            if cgal and tour < 4:
+                # Comme le site (worker → ChatSession) : l'erreur repart à l'IA, qui refait la pièce.
+                journal.append(f"compilation KO ({cgal[:60]}) → renvoyée à l'IA")
+                msgs.append({"role": "assistant", "content": [b.model_dump(exclude_none=True) for b in r.content]})
+                msgs.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": build.id, "is_error": True, "content": "Compilation failed:\nA hull() failed in the OpenSCAD engine (CGAL error in applyHull), so that shape was dropped and the model is incomplete. Rebuild it without hull() over spheres: for rounded boxes use BOSL2 cuboid([x, y, z], rounding=r).\n" + cgal}]})
+                continue
             return dict(id=sid, inspire=inspire, premier=premier, questions=questions, journal=journal, titre=build.input.get("title"), texte=texte[:400], compile=c, tours=tour + 1, s=round(time.time() - t0))
         q = next((b for b in outils if b.name == "answer_user"), None)
         if not q:
