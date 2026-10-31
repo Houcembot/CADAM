@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Model } from '@shared/types';
 import { ModelConfig } from '../types/misc.ts';
 import { useConversation } from '@/contexts/ConversationContext';
+import { useT, type ModelText } from '@/i18n';
 
 interface ModelSelectorProps {
   models: ModelConfig[];
@@ -23,7 +24,7 @@ interface ModelSelectorProps {
 }
 
 export function ModelSelector({
-  models,
+  models: rawModels,
   selectedModel,
   onModelChange,
   className,
@@ -32,6 +33,16 @@ export function ModelSelector({
   focused = false,
 }: ModelSelectorProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const t = useT();
+  // Noms/descriptions traduits (les noms de modèles restent en latin).
+  const models = useMemo(
+    () =>
+      rawModels.map((m) => {
+        const loc = (t.models as Record<string, ModelText | undefined>)[m.id];
+        return loc ? { ...m, ...loc } : m;
+      }),
+    [rawModels, t],
+  );
   const { conversation } = useConversation();
 
   // Use provided type prop or fall back to conversation context
@@ -138,7 +149,7 @@ export function ModelSelector({
           )}
           disabled={!!disabled}
         >
-          <span className="relative inline-grid items-center overflow-hidden text-right font-normal">
+          <span className="relative inline-grid items-center overflow-hidden text-end font-normal">
             {/* Previous name sliding out */}
             {prevModelName && (
               <span
@@ -167,7 +178,7 @@ export function ModelSelector({
             </span>
           </span>
           <ChevronDown
-            className={`ml-1 h-4 w-4 flex-shrink-0 opacity-70 transition-transform duration-200 ${
+            className={`ms-1 h-4 w-4 flex-shrink-0 opacity-70 transition-transform duration-200 ${
               isDropdownOpen ? 'rotate-180' : ''
             }`}
           />

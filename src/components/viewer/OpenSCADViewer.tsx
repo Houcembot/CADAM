@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { MeshFilesContext } from '@/contexts/MeshFilesContext';
 import { createDXFProjectionCode } from '@/utils/dxfUtils';
 import { DxfExporter } from '@/utils/downloadUtils';
+import { getT } from '@/i18n';
 
 // Extract import() filenames from OpenSCAD code
 function extractImportFilenames(code: string): string[] {
@@ -297,10 +298,10 @@ function FixWithAIButton({
         </div>
         <div className="text-center">
           <p className="text-sm font-medium text-adam-blue">
-            Error Compiling Model
+            {getT().viewer.compileErrorTitle}
           </p>
           <p className="mt-1 text-xs text-adam-text-primary/60">
-            clic3d encountered an error while compiling
+            {getT().viewer.compileErrorDesc}
           </p>
         </div>
       </div>
@@ -331,7 +332,9 @@ function FixWithAIButton({
         >
           <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-adam-blue/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           <Wrench className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
-          <span className="relative text-sm font-medium">Fix with AI</span>
+          <span className="relative text-sm font-medium">
+            {getT().viewer.fixWithAi}
+          </span>
         </Button>
       )}
     </div>

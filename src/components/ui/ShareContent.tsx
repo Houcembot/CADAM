@@ -15,6 +15,7 @@ import { MeshGifPreview } from '../viewer/MeshGifPreview';
 import { OpenSCADGifPreview } from '../viewer/OpenSCADGifPreview';
 import { cn } from '@/lib/utils';
 import type React from 'react';
+import { useT } from '@/i18n';
 
 type ShareContentProps = {
   conversationId: string;
@@ -32,6 +33,7 @@ export function ShareContent({
   openscadCode,
 }: ShareContentProps) {
   const [justCopied, setJustCopied] = useState(false);
+  const t = useT();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [readyToDownload, setReadyToDownload] = useState(false);
@@ -58,15 +60,15 @@ export function ShareContent({
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-6">
         <div className="h-5 font-medium text-adam-neutral-100">
-          Share public link to chat
+          {t.share.title}
         </div>
         <div className="flex items-center gap-3 text-xs text-adam-text-secondary">
           {isPublic ? (
-            <div className="ml-1 h-1 w-1 rounded-full bg-[#64D557] outline outline-4 outline-[#79FF6B]/30" />
+            <div className="ms-1 h-1 w-1 rounded-full bg-[#64D557] outline outline-4 outline-[#79FF6B]/30" />
           ) : (
             <div className="h-3 w-3 rounded-full bg-[#FF392F] outline outline-2 outline-[#FF0000]/30" />
           )}
-          {isPublic ? 'Anyone with the link can view' : 'Only you can view'}
+          {isPublic ? t.share.anyoneCanView : t.share.onlyYou}
         </div>
 
         {/* Local Suspense boundary — anything inside the preview (the
@@ -117,8 +119,11 @@ export function ShareContent({
             !isPublic && 'h-0 opacity-0',
           )}
         >
-          <div className="flex w-full items-center justify-between gap-4 rounded-full bg-adam-neutral-950 py-2 pl-6 pr-3">
-            <span className="line-clamp-1 text-sm text-adam-neutral-100">
+          <div className="flex w-full items-center justify-between gap-4 rounded-full bg-adam-neutral-950 py-2 pe-3 ps-6">
+            <span
+              dir="ltr"
+              className="line-clamp-1 text-sm text-adam-neutral-100"
+            >
               {shareLink}
             </span>
             <button
@@ -130,7 +135,7 @@ export function ShareContent({
               ) : (
                 <CopyIcon className="h-4 w-4" />
               )}
-              {justCopied ? 'Copied!' : 'Copy'}
+              {justCopied ? t.share.copied : t.share.copy}
             </button>
           </div>
           <div className="grid w-full grid-cols-3 justify-between text-adam-neutral-300">
@@ -169,11 +174,11 @@ export function ShareContent({
         >
           {isGenerating ? (
             <div className="flex items-center gap-2">
-              Generating...
+              {t.share.generating}
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : (
-            'Download GIF'
+            t.share.downloadGif
           )}
         </Button>
       ) : null}
@@ -183,11 +188,11 @@ export function ShareContent({
           variant="destructive"
           onClick={() => onPrivacyChange('private')}
         >
-          Make Private
+          {t.share.makePrivate}
         </Button>
       ) : (
         <Button variant="light" onClick={handlePublicClick}>
-          Share
+          {t.share.share}
         </Button>
       )}
     </div>

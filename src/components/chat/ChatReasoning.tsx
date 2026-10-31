@@ -13,6 +13,7 @@ import { CollapsibleContent } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSharedSpinnerVerb } from '@/hooks/useSharedSpinnerVerb';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n';
 
 // Mirrors `streamdownPlugins` from ai-elements/reasoning.tsx ReasoningContent
 // so our custom-scrolling body keeps full markdown feature parity (code
@@ -61,6 +62,7 @@ export function ChatReasoning({
   className,
 }: ChatReasoningProps) {
   const thinkingVerb = useSharedSpinnerVerb(isStreaming);
+  const t = useT();
 
   return (
     <Reasoning isStreaming={isStreaming} className={cn('mb-0 mt-1', className)}>
@@ -72,9 +74,9 @@ export function ChatReasoning({
             return <Shimmer duration={1}>{`${thinkingVerb}...`}</Shimmer>;
           }
           if (duration === undefined) {
-            return <p>Thought for a few seconds</p>;
+            return <p>{t.chat.thoughtFewSeconds}</p>;
           }
-          return <p>Thought for {duration} seconds</p>;
+          return <p>{t.chat.thoughtFor(duration)}</p>;
         }}
       />
       <ChatReasoningBody isStreaming={isStreaming}>{text}</ChatReasoningBody>

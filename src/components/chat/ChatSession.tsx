@@ -31,6 +31,7 @@ import type {
 import { useQueryClient } from '@tanstack/react-query';
 import posthog from 'posthog-js';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { localizeServerError, useT } from '@/i18n';
 
 interface ChatSessionProps {
   conversation: Conversation;
@@ -106,6 +107,7 @@ export function ChatSession({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useT();
 
   // ───────────────────────────────────────────────────────────────────────
   // Transport — strips client state out of the wire body. Server reads the
@@ -136,15 +138,14 @@ export function ChatSession({
         billingErrorHandledRef.current = true;
         queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
         toast({
-          title: "You're out of tokens",
-          description:
-            'Upgrade your plan or buy a token pack to keep chatting.',
+          title: t.chat.outOfTokensTitle,
+          description: t.chat.outOfTokensDesc,
           variant: 'destructive',
         });
       }
       return response;
     },
-    [queryClient, toast],
+    [queryClient, toast, t],
   );
 
   const transport = useMemo(
@@ -444,8 +445,8 @@ export function ChatSession({
       }
       const message = error instanceof Error ? error.message : String(error);
       toast({
-        title: 'clic3d ran into a problem',
-        description: message || 'The model call failed. Please try again.',
+        title: t.chat.problemTitle,
+        description: localizeServerError(message),
         variant: 'destructive',
       });
     },
@@ -761,7 +762,7 @@ export function ChatSession({
         <TextAreaChat
           type={conversation.type}
           onSubmit={(parts) => void handleSend(parts)}
-          placeholder="Keep iterating with clic3d..."
+          placeholder={t.chat.continuePlaceholder}
           isLoading={isLoading}
           stopGenerating={stop}
           disabled={isDisabled}

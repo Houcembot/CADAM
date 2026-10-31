@@ -38,6 +38,8 @@ import {
 } from '@/utils/downloadUtils';
 import type { DxfExporter } from '@/utils/downloadUtils';
 import { useToast } from '@/hooks/use-toast';
+import { useT } from '@/i18n';
+import { DirectionProvider } from '@radix-ui/react-direction';
 
 interface ParameterSectionProps {
   parameters: Parameter[];
@@ -57,6 +59,7 @@ export function ParameterSection({
   code,
 }: ParameterSectionProps) {
   const { toast } = useToast();
+  const t = useT();
   const [selectedFormat, setSelectedFormat] = useState<DownloadFormat>('stl');
   const [isExporting, setIsExporting] = useState(false);
 
@@ -156,11 +159,8 @@ export function ParameterSection({
       console.error('[OpenSCAD] Failed to export DXF:', error);
       // Optional user-facing feedback to surface the failure
       toast({
-        title: 'DXF export failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'clic3d could not export this model as DXF.',
+        title: t.params.dxfFailed,
+        description: t.params.dxfFailedDesc,
         variant: 'destructive',
       });
     } finally {
@@ -188,11 +188,11 @@ export function ParameterSection({
   const isAnyFormatAvailable = Object.values(formatAvailable).some(Boolean);
 
   return (
-    <div className="h-full w-full max-w-full border-l border-gray-200/20 bg-adam-bg-secondary-dark dark:border-gray-800">
-      <div className="flex h-14 items-center justify-between border-b border-adam-neutral-700 bg-gradient-to-r from-adam-bg-secondary-dark to-adam-bg-secondary-dark/95 px-6 py-6">
+    <div className="h-full w-full max-w-full border-s border-gray-200/20 bg-adam-bg-secondary-dark dark:border-gray-800">
+      <div className="flex h-14 items-center justify-between border-b border-adam-neutral-700 bg-gradient-to-r from-adam-bg-secondary-dark to-adam-bg-secondary-dark/95 px-6 py-6 rtl:bg-gradient-to-l md:rtl:ps-14">
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold tracking-tight text-adam-text-primary">
-            Parameters
+            {t.editor.parameters}
           </span>
         </div>
         <TooltipProvider>
@@ -214,7 +214,7 @@ export function ParameterSection({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Reset all parameters</p>
+              <p>{t.params.resetAll}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -228,11 +228,15 @@ export function ParameterSection({
                 onOpenChange={setDimensionsOpen}
               >
                 <CollapsibleTrigger
-                  aria-label={`${dimensionsOpen ? 'Collapse' : 'Expand'} dimension parameters`}
+                  aria-label={
+                    dimensionsOpen
+                      ? t.params.collapseDimensions
+                      : t.params.expandDimensions
+                  }
                   className="group flex w-full items-center justify-between gap-2 rounded-md py-1 text-xs font-semibold text-adam-text-primary transition-colors focus:outline-none"
                 >
                   <span className="flex items-center gap-2">
-                    Dimensions
+                    {t.params.dimensions}
                     <span className="text-[10px] text-adam-neutral-400">
                       {mainParameters.length}
                     </span>
@@ -246,11 +250,15 @@ export function ParameterSection({
                 <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
                   <div className="mt-3 flex flex-col gap-3">
                     {mainParameters.map((param) => (
-                      <ParameterInput
-                        key={param.name}
-                        param={param}
-                        handleCommit={handleCommit}
-                      />
+                      // Noms de variables OpenSCAD : tels quels, en LTR.
+                      <div key={param.name} dir="ltr">
+                        <DirectionProvider dir="ltr">
+                          <ParameterInput
+                            param={param}
+                            handleCommit={handleCommit}
+                          />
+                        </DirectionProvider>
+                      </div>
                     ))}
                   </div>
                 </CollapsibleContent>
@@ -263,11 +271,13 @@ export function ParameterSection({
                 className="mt-3 border-t border-adam-neutral-700/60 pt-3"
               >
                 <CollapsibleTrigger
-                  aria-label={`${colorsOpen ? 'Collapse' : 'Expand'} color parameters`}
+                  aria-label={
+                    colorsOpen ? t.params.collapseColors : t.params.expandColors
+                  }
                   className="group flex w-full items-center justify-between gap-2 rounded-md py-1 text-xs font-semibold text-adam-text-primary transition-colors focus:outline-none"
                 >
                   <span className="flex items-center gap-2">
-                    Colors
+                    {t.params.colors}
                     <span className="text-[10px] text-adam-neutral-400">
                       {colorParameters.length}
                     </span>
@@ -281,11 +291,15 @@ export function ParameterSection({
                 <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
                   <div className="mt-3 flex flex-col gap-3">
                     {colorParameters.map((param) => (
-                      <ParameterInput
-                        key={param.name}
-                        param={param}
-                        handleCommit={handleCommit}
-                      />
+                      // Noms de variables OpenSCAD : tels quels, en LTR.
+                      <div key={param.name} dir="ltr">
+                        <DirectionProvider dir="ltr">
+                          <ParameterInput
+                            param={param}
+                            handleCommit={handleCommit}
+                          />
+                        </DirectionProvider>
+                      </div>
                     ))}
                   </div>
                 </CollapsibleContent>
@@ -298,13 +312,13 @@ export function ParameterSection({
             <Button
               onClick={handleDownload}
               disabled={isDownloadDisabled}
-              aria-label={`download ${selectedFormat.toUpperCase()} file`}
-              className="h-12 flex-1 rounded-r-none bg-adam-neutral-50 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
+              aria-label={t.params.downloadFormat(selectedFormat.toUpperCase())}
+              className="h-12 flex-1 rounded-e-none bg-adam-neutral-50 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
             >
               {isExporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="me-2 h-4 w-4" />
               )}
               {selectedFormat.toUpperCase()}
             </Button>
@@ -312,8 +326,8 @@ export function ParameterSection({
               <DropdownMenuTrigger asChild>
                 <Button
                   disabled={!isAnyFormatAvailable}
-                  aria-label="select download format"
-                  className="h-12 w-12 rounded-l-none border-l border-adam-neutral-300 bg-adam-neutral-50 p-0 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
+                  aria-label={t.params.selectFormat}
+                  className="h-12 w-12 rounded-s-none border-s border-adam-neutral-300 bg-adam-neutral-50 p-0 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
                 >
                   <ChevronUp className="h-4 w-4" />
                 </Button>
@@ -328,8 +342,8 @@ export function ParameterSection({
                   className="cursor-pointer text-adam-text-primary"
                 >
                   <span className="text-sm">.STL</span>
-                  <span className="ml-3 text-xs text-adam-text-primary/60">
-                    3D Printing
+                  <span className="ms-3 text-xs text-adam-text-primary/60">
+                    {t.params.format3dPrint}
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -338,8 +352,8 @@ export function ParameterSection({
                   className="cursor-pointer text-adam-text-primary"
                 >
                   <span className="text-sm">.SCAD</span>
-                  <span className="ml-3 text-xs text-adam-text-primary/60">
-                    OpenSCAD Code
+                  <span className="ms-3 text-xs text-adam-text-primary/60">
+                    {t.params.formatScad}
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -348,8 +362,8 @@ export function ParameterSection({
                   className="cursor-pointer text-adam-text-primary"
                 >
                   <span className="text-sm">.DXF</span>
-                  <span className="ml-3 text-xs text-adam-text-primary/60">
-                    2D Projection to the (x,y) plane
+                  <span className="ms-3 text-xs text-adam-text-primary/60">
+                    {t.params.formatDxf}
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

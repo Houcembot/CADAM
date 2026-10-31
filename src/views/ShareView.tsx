@@ -24,6 +24,7 @@ import { useParams } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConversationView } from './ConversationView';
+import { getT } from '@/i18n';
 
 type ActivePreview =
   | { type: 'artifact'; messageId: string; artifact: ParametricArtifact }
@@ -88,7 +89,7 @@ export default function ShareView() {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-adam-bg-secondary-dark text-adam-text-primary">
         <span className="text-2xl font-medium">404</span>
-        <span className="text-sm">Conversation not found</span>
+        <span className="text-sm">{getT().editor.notFound}</span>
       </div>
     );
   }
@@ -274,7 +275,7 @@ function ConversationShare({ conversation, messages }: ConversationShareProps) {
             <MeshPreview meshId={activePreview.meshId} />
           ) : (
             <div className="text-sm text-adam-text-secondary">
-              Nothing to preview yet
+              {getT().editor.nothingToPreview}
             </div>
           )}
         </div>
@@ -293,7 +294,7 @@ function ConversationShare({ conversation, messages }: ConversationShareProps) {
             <MeshPreview meshId={activePreview.meshId} />
           ) : (
             <div className="text-sm text-adam-text-secondary">
-              Nothing to preview yet
+              {getT().editor.nothingToPreview}
             </div>
           )}
         </div>

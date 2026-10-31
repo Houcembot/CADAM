@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { GizmoHelper, GizmoViewcube } from '@react-three/drei';
 import * as THREE from 'three';
+import { getT } from '@/i18n';
 
 type Alignment =
   | 'top-left'
@@ -101,7 +102,7 @@ export function ViewGizmo({
   return (
     <GizmoHelper alignment={alignment} margin={margin}>
       {/* @ts-expect-error drei 10.0.7 types this ignored callback return as null. */}
-      <GizmoViewcube onClick={handleClick} />
+      <GizmoViewcube onClick={handleClick} faces={getT().viewer.cubeFaces} />
     </GizmoHelper>
   );
 }

@@ -18,6 +18,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { useT } from '@/i18n';
 
 interface RenameDialogDrawerProps {
   open: boolean;
@@ -36,6 +37,7 @@ export function RenameDialogDrawer({
 }: RenameDialogDrawerProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const inputRef = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   useEffect(() => {
     if (open) {
@@ -63,11 +65,9 @@ export function RenameDialogDrawer({
         <DialogContent className="border-[2px] border-adam-neutral-700 bg-adam-background-1 sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-adam-neutral-100">
-              Rename Creation
+              {t.history.renameTitle}
             </DialogTitle>
-            <DialogDescription>
-              Enter a new name for this creation conversation.
-            </DialogDescription>
+            <DialogDescription>{t.history.renameDesc}</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Input
@@ -75,8 +75,8 @@ export function RenameDialogDrawer({
               value={newTitle}
               onChange={(e) => onNewTitleChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="border-2 border-adam-background-2 bg-adam-background-2 pl-6 text-base shadow-[0_0_0px_rgba(255,50,150,0)] ring-0 transition-[border-color,box-shadow] duration-300 ease-in-out hover:border-adam-background-2 hover:shadow-[0_0_4px_rgba(255,50,150,0.9),0_0_5px_rgba(255,50,150,0.7)] focus:border-adam-blue focus:outline-none"
-              placeholder="Conversation name"
+              className="border-2 border-adam-background-2 bg-adam-background-2 ps-6 text-base shadow-[0_0_0px_rgba(255,50,150,0)] ring-0 transition-[border-color,box-shadow] duration-300 ease-in-out hover:border-adam-background-2 hover:shadow-[0_0_4px_rgba(255,50,150,0.9),0_0_5px_rgba(255,50,150,0.7)] focus:border-adam-blue focus:outline-none"
+              placeholder={t.history.renamePlaceholder}
             />
           </div>
           <DialogFooter>
@@ -85,13 +85,13 @@ export function RenameDialogDrawer({
               onClick={() => onOpenChange(false)}
               className="border-adam-neutral-700 bg-adam-background-2 text-adam-neutral-50 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-50"
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               onClick={onRename}
               className="border bg-adam-neutral-50 text-black [@media(hover:hover)]:hover:border-adam-neutral-50 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-50"
             >
-              Save
+              {t.common.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -104,11 +104,9 @@ export function RenameDialogDrawer({
       <DrawerContent className="mx-1 border border-adam-neutral-700 bg-adam-background-1">
         <DrawerHeader className="border-b border-adam-neutral-700 text-center">
           <DrawerTitle className="text-adam-neutral-100">
-            Rename Creation
+            {t.history.renameTitle}
           </DrawerTitle>
-          <DrawerDescription>
-            Enter a new name for this creation conversation.
-          </DrawerDescription>
+          <DrawerDescription>{t.history.renameDesc}</DrawerDescription>
         </DrawerHeader>
         <div className="p-4">
           <Input
@@ -116,8 +114,8 @@ export function RenameDialogDrawer({
             value={newTitle}
             onChange={(e) => onNewTitleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="border-2 border-adam-background-2 bg-adam-background-2 pl-6 text-base shadow-[0_0_0px_rgba(255,50,150,0)] ring-0 transition-[border-color,box-shadow] duration-300 ease-in-out hover:border-adam-background-2 hover:shadow-[0_0_4px_rgba(255,50,150,0.9),0_0_5px_rgba(255,50,150,0.7)] focus:border-adam-blue focus:outline-none"
-            placeholder="Conversation name"
+            className="border-2 border-adam-background-2 bg-adam-background-2 ps-6 text-base shadow-[0_0_0px_rgba(255,50,150,0)] ring-0 transition-[border-color,box-shadow] duration-300 ease-in-out hover:border-adam-background-2 hover:shadow-[0_0_4px_rgba(255,50,150,0.9),0_0_5px_rgba(255,50,150,0.7)] focus:border-adam-blue focus:outline-none"
+            placeholder={t.history.renamePlaceholder}
           />
         </div>
         <DrawerFooter className="border-t border-adam-neutral-700">
@@ -125,14 +123,14 @@ export function RenameDialogDrawer({
             onClick={onRename}
             className="border bg-adam-neutral-50 text-black [@media(hover:hover)]:hover:border-adam-neutral-50 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-50"
           >
-            Save
+            {t.common.save}
           </Button>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="border-adam-neutral-700 bg-adam-background-2 text-adam-neutral-50 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-50"
           >
-            Cancel
+            {t.common.cancel}
           </Button>
         </DrawerFooter>
       </DrawerContent>

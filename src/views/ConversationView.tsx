@@ -26,6 +26,7 @@ import {
   PanelGroup,
   PanelResizeHandle,
 } from 'react-resizable-panels';
+import { useLang } from '@/i18n';
 
 const PANEL_SIZES = {
   CHAT: { DEFAULT: 30, MIN: 384, MAX: 550 },
@@ -73,6 +74,7 @@ export function ConversationView({
   mobilePreviewVersion = 0,
   hasParameters,
 }: ConversationViewProps) {
+  const { t, dir } = useLang();
   const chatPanelRef = useRef<ImperativePanelHandle>(null);
   const parametersPanelRef = useRef<ImperativePanelHandle>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
@@ -254,14 +256,12 @@ export function ConversationView({
               style={{ height: mobileSheetHeight }}
             >
               <SheetHeader className="hidden">
-                <SheetTitle>Model preview</SheetTitle>
-                <SheetDescription>
-                  Preview and parameters for the selected model.
-                </SheetDescription>
+                <SheetTitle>{t.editor.modelPreview}</SheetTitle>
+                <SheetDescription>{t.editor.modelPreviewDesc}</SheetDescription>
               </SheetHeader>
               <button
                 type="button"
-                aria-label="Close preview"
+                aria-label={t.editor.closePreview}
                 onTouchStart={handleMobileSheetTouchStart}
                 onTouchMove={handleMobileSheetTouchMove}
                 onTouchEnd={handleMobileSheetTouchEnd}
@@ -317,7 +317,11 @@ export function ConversationView({
   }
 
   return (
+    // Disposition des panneaux gardée en LTR (chat à gauche, paramètres à
+    // droite) : react-resizable-panels calcule le glissement en X et
+    // s'inverserait en RTL. Le contenu de chaque panneau reprend `dir`.
     <div
+      dir="ltr"
       className="flex h-full w-full overflow-hidden bg-[#292828]"
       ref={setContainerRef}
     >
@@ -335,7 +339,10 @@ export function ConversationView({
           id="chat-panel"
           order={0}
         >
-          <div className="relative flex h-full min-w-0 flex-col border-r border-adam-neutral-700 bg-adam-bg-secondary-dark">
+          <div
+            dir={dir}
+            className="relative flex h-full min-w-0 flex-col border-r border-adam-neutral-700 bg-adam-bg-secondary-dark"
+          >
             {chatPanelSlot}
           </div>
         </Panel>
@@ -355,14 +362,14 @@ export function ConversationView({
           {isChatCollapsed && (
             <div className="absolute left-0 top-1/2 z-50 -translate-y-1/2">
               <Button
-                aria-label="Expand chat panel"
+                aria-label={t.editor.expandChat}
                 onClick={handleChatExpand}
                 className="flex h-[100px] w-9 flex-col items-center rounded-l-none rounded-r-lg bg-adam-bg-secondary-dark px-1.5 py-2 text-adam-text-primary"
               >
                 <ChevronsRight className="h-5 w-5 text-white" />
                 <div className="flex flex-1 items-center justify-center">
                   <span className="rotate-90 transform text-center text-base font-semibold text-white">
-                    Chat
+                    {t.editor.chat}
                   </span>
                 </div>
               </Button>
@@ -382,7 +389,9 @@ export function ConversationView({
           id="preview-panel"
           order={1}
         >
-          {previewSlot}
+          <div dir={dir} className="contents">
+            {previewSlot}
+          </div>
         </Panel>
 
         {/* Parameter panel mount stays stable; collapses to 0 when no artifact
@@ -409,14 +418,14 @@ export function ConversationView({
           {hasParameters && isParametersCollapsed && (
             <div className="absolute right-0 top-1/2 z-50 -translate-y-1/2">
               <Button
-                aria-label="Expand parameters panel"
+                aria-label={t.editor.expandParameters}
                 onClick={handleParametersExpand}
                 className="flex h-[140px] w-9 flex-col items-center rounded-l-lg rounded-r-none bg-adam-bg-secondary-dark p-2 px-1.5 py-2 text-adam-text-primary"
               >
                 <ChevronsRight className="mb-3 h-5 w-5 rotate-180 text-white" />
                 <div className="flex flex-1 items-center justify-center">
                   <span className="min-w-[100px] -rotate-90 transform text-center text-base font-semibold text-white">
-                    Parameters
+                    {t.editor.parameters}
                   </span>
                 </div>
               </Button>
@@ -434,7 +443,11 @@ export function ConversationView({
           id="parameters-panel"
           order={2}
         >
-          {hasParameters && parametersSlot}
+          {hasParameters && (
+            <div dir={dir} className="contents">
+              {parametersSlot}
+            </div>
+          )}
         </Panel>
       </PanelGroup>
     </div>

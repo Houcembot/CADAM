@@ -28,6 +28,7 @@ import { createAndCacheAiChat } from '@/hooks/useCachedAiChat';
 import type { AppUIMessage } from '@shared/chatAi';
 import { ensureInputRecords } from '@/lib/aiMessages';
 import { persistUserMessage } from '@/services/messageService';
+import { localizeServerError, useT } from '@/i18n';
 
 // clic3d-cadam: removed upstream Adam-CAD product promos (Onshape / Fusion
 // extensions — not clic3d products). Kept as an empty list so the rendering
@@ -50,6 +51,7 @@ export function PromptView() {
   const { data: profile, isLoading: isProfileLoading } = useProfile();
   const { isSidebarOpen } = useLayoutContext();
   const queryClient = useQueryClient();
+  const t = useT();
 
   const firstName = useMemo(() => {
     // Wait until the profile query resolves for signed-in users so the
@@ -108,11 +110,11 @@ export function PromptView() {
   const getTimeBasedGreeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) {
-      return 'Good morning';
+      return 'morning' as const;
     } else if (hour < 18) {
-      return 'Good afternoon';
+      return 'afternoon' as const;
     } else {
-      return 'Good evening';
+      return 'evening' as const;
     }
   }, []); // Empty dependency array means it only calculates once per page load
 
@@ -227,9 +229,10 @@ export function PromptView() {
       setDraftConversationId(crypto.randomUUID());
       Sentry.captureException(error);
       toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Failed to process prompt',
+        title: t.common.error,
+        description: localizeServerError(
+          error instanceof Error ? error.message : t.prompt.processFailed,
+        ),
         variant: 'destructive',
       });
     },
@@ -239,7 +242,7 @@ export function PromptView() {
     <div
       className={cn(
         'relative h-full min-h-full w-full transition-all duration-300 ease-in-out',
-        isSidebarOpen && !isMobile && user?.id && 'pb-6 pr-6 pt-6',
+        isSidebarOpen && !isMobile && user?.id && 'pb-6 pe-6 pt-6',
       )}
     >
       <div
@@ -279,8 +282,7 @@ export function PromptView() {
                 isLoaded ? 'opacity-100' : 'opacity-0',
               )}
             >
-              {getTimeBasedGreeting}
-              {firstName ? `, ${firstName}` : ''}!
+              {t.prompt.greeting(getTimeBasedGreeting, firstName)}
             </h1>
           </div>
           <div className="flex w-full flex-col items-center">
@@ -300,7 +302,7 @@ export function PromptView() {
                       return;
                     }
                   }}
-                  placeholder="Start building with clic3d..."
+                  placeholder={t.prompt.placeholder}
                   type={type}
                   disabled={limitReached || isGenerating}
                   model={model}

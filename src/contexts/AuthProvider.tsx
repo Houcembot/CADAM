@@ -8,6 +8,7 @@ import { AuthContext, type BillingStatus, getLevel } from './AuthContext';
 import { apiJson } from '@/services/api';
 import { useClic3dSSO } from '@/clic3d/useClic3dSSO';
 import { z } from 'zod';
+import { getT } from '@/i18n';
 
 const LOCAL_BILLING_STATUS: BillingStatus = {
   user: { hasTrialed: false },
@@ -264,12 +265,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   if (ssoStatus === 'error') {
+    const t = getT();
     return (
       <div className="flex min-h-screen items-center justify-center bg-adam-bg-secondary-dark p-8 text-center">
         <p className="text-adam-text-secondary">
-          Service de génération temporairement indisponible.
+          {t.auth.ssoErrorLine1}
           <br />
-          Recharge la page ou réessaie dans quelques minutes.
+          {t.auth.ssoErrorLine2}
         </p>
       </div>
     );

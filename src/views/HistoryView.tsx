@@ -21,6 +21,7 @@ import { ConversationCard } from '@/components/history/ConversationCard';
 import { VisualCard } from '@/components/history/VisualCard';
 import { RenameDialogDrawer } from '@/components/history/RenameDialogDrawer';
 import { cn } from '@/lib/utils';
+import { getDateLocale, useT } from '@/i18n';
 
 const VIEW_TRANSITION_PROPS = {
   initial: { opacity: 0, y: 10, filter: 'blur(2px)' },
@@ -46,6 +47,7 @@ export function HistoryView() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const t = useT();
   const queryClient = useQueryClient();
   const shouldReduceMotion = useReducedMotion();
 
@@ -100,12 +102,12 @@ export function HistoryView() {
   useEffect(() => {
     if (conversationQuery.isError) {
       toast({
-        title: 'Error',
-        description: 'Failed to load conversations',
+        title: t.common.error,
+        description: t.history.loadFailed,
         variant: 'destructive',
       });
     }
-  }, [conversationQuery.isError, toast]);
+  }, [conversationQuery.isError, toast, t]);
 
   const deleteConversation = useMutation({
     mutationFn: async (conversationId: string) => {
@@ -141,8 +143,8 @@ export function HistoryView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast({
-        title: 'Success',
-        description: 'Conversation deleted successfully',
+        title: t.common.success,
+        description: t.history.deleted,
       });
     },
     onError: (error: unknown, _conversationId: string, context) => {
@@ -152,8 +154,8 @@ export function HistoryView() {
         context?.previousConversations,
       );
       toast({
-        title: 'Error',
-        description: 'Failed to delete conversation',
+        title: t.common.error,
+        description: t.history.deleteFailed,
         variant: 'destructive',
       });
     },
@@ -189,8 +191,8 @@ export function HistoryView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast({
-        title: 'Success',
-        description: 'Conversation renamed successfully',
+        title: t.common.success,
+        description: t.history.renamed,
       });
       setEditingConversation(null);
       setOpen(false);
@@ -202,8 +204,8 @@ export function HistoryView() {
         context?.previousConversations,
       );
       toast({
-        title: 'Error',
-        description: 'Failed to rename conversation',
+        title: t.common.error,
+        description: t.history.renameFailed,
         variant: 'destructive',
       });
     },
@@ -241,8 +243,11 @@ export function HistoryView() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast({
-        title: 'Success',
-        description: `Conversation is now ${variables.newPrivacy === 'public' ? 'public' : 'private'}`,
+        title: t.common.success,
+        description:
+          variables.newPrivacy === 'public'
+            ? t.history.nowPublic
+            : t.history.nowPrivate,
       });
     },
     onError: (error: unknown, _variables, context) => {
@@ -252,8 +257,8 @@ export function HistoryView() {
         context?.previousConversations,
       );
       toast({
-        title: 'Error',
-        description: 'Failed to change conversation privacy',
+        title: t.common.error,
+        description: t.history.privacyFailed,
         variant: 'destructive',
       });
     },
@@ -263,7 +268,7 @@ export function HistoryView() {
     if (!editingConversation) return;
     if (!newTitle.trim()) {
       toast({
-        title: 'Title cannot be empty',
+        title: t.history.titleEmpty,
         variant: 'default',
       });
       return;
@@ -313,27 +318,28 @@ export function HistoryView() {
         <div className="mx-auto w-full max-w-6xl px-6 pb-4 pt-10 md:px-20 md:py-4">
           <div className="flex items-center justify-between py-3">
             <h1 className="flex items-center gap-2 px-2 text-2xl font-medium text-adam-neutral-10">
-              Past Creations
+              {t.history.title}
             </h1>
 
             {/* View Toggle */}
             <div
               role="group"
-              aria-label="View mode"
+              aria-label={t.history.viewMode}
               className="relative grid grid-cols-2 items-center rounded-lg border border-adam-neutral-700 bg-adam-background-2 p-1"
             >
               <span
                 className={cn(
-                  'pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md bg-adam-neutral-950 shadow-[0_1px_10px_rgba(0,0,0,0.22)] transition-transform ease-out',
+                  'pointer-events-none absolute inset-y-1 start-1 w-[calc(50%-0.25rem)] rounded-md bg-adam-neutral-950 shadow-[0_1px_10px_rgba(0,0,0,0.22)] transition-transform ease-out',
                   shouldReduceMotion ? 'duration-0' : 'duration-300',
-                  viewMode === 'visual' && 'translate-x-full',
+                  viewMode === 'visual' &&
+                    'translate-x-full rtl:-translate-x-full',
                 )}
               />
               <Button
                 variant="ghost"
                 size="sm"
                 aria-pressed={viewMode === 'list'}
-                aria-label="List view"
+                aria-label={t.history.listView}
                 onClick={() => setViewMode('list')}
                 className={`relative z-10 h-8 px-3 transition-colors duration-200 ${
                   viewMode === 'list'
@@ -341,14 +347,14 @@ export function HistoryView() {
                     : 'text-adam-neutral-400 hover:bg-adam-neutral-950/40 hover:text-adam-neutral-50'
                 }`}
               >
-                <List className="mr-2 h-4 w-4" />
-                List
+                <List className="me-2 h-4 w-4" />
+                {t.history.list}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 aria-pressed={viewMode === 'visual'}
-                aria-label="Visual view"
+                aria-label={t.history.visualView}
                 onClick={() => setViewMode('visual')}
                 className={`relative z-10 h-8 px-3 transition-colors duration-200 ${
                   viewMode === 'visual'
@@ -356,18 +362,18 @@ export function HistoryView() {
                     : 'text-adam-neutral-400 hover:bg-adam-neutral-950/40 hover:text-adam-neutral-50'
                 }`}
               >
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                Visual
+                <LayoutGrid className="me-2 h-4 w-4" />
+                {t.history.visual}
               </Button>
             </div>
           </div>
 
           <div className="relative mt-4">
             <Input
-              placeholder="Search generations..."
+              placeholder={t.history.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-0 bg-adam-background-2 pl-6 text-base shadow-[inset_0_0_10px_0_rgba(0,0,0,0.32),0_0_0_2px_rgba(0,0,0,0)] ring-0 transition-shadow duration-300 ease-in-out hover:shadow-[inset_0_0_4px_0_rgba(0,0,0,0.16),0_0_0_2px_rgba(60,60,60,1)] focus:shadow-[inset_0_0_4px_0_rgba(0,0,0,0.16),0_0_0_2px_#00A6FF] focus:outline-none sm:text-sm"
+              className="border-0 bg-adam-background-2 ps-6 text-base shadow-[inset_0_0_10px_0_rgba(0,0,0,0.32),0_0_0_2px_rgba(0,0,0,0)] ring-0 transition-shadow duration-300 ease-in-out hover:shadow-[inset_0_0_4px_0_rgba(0,0,0,0.16),0_0_0_2px_rgba(60,60,60,1)] focus:shadow-[inset_0_0_4px_0_rgba(0,0,0,0.16),0_0_0_2px_#00A6FF] focus:outline-none sm:text-sm"
             />
           </div>
         </div>
@@ -377,7 +383,7 @@ export function HistoryView() {
             {conversationQuery.isLoading ? (
               <div className="space-y-4 py-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4">
+                  <div key={i} className="flex items-center gap-4">
                     <Skeleton className="h-12 w-12 rounded-lg" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-4 w-[250px]" />
@@ -392,20 +398,18 @@ export function HistoryView() {
                 {searchQuery ? (
                   <>
                     <p className="mb-2 text-lg font-medium">
-                      No matching conversations found
+                      {t.history.noMatch}
                     </p>
-                    <p className="mb-4 text-sm">Try a different search term</p>
+                    <p className="mb-4 text-sm">{t.history.tryOtherSearch}</p>
                   </>
                 ) : (
                   <>
                     <p className="mb-2 text-lg font-medium">
-                      No conversations yet
+                      {t.history.empty}
                     </p>
-                    <p className="mb-4 text-sm">
-                      Start a new chat to begin building CAD
-                    </p>
+                    <p className="mb-4 text-sm">{t.history.emptyHint}</p>
                     <Button onClick={() => navigate({ to: '/' })}>
-                      Start New Chat
+                      {t.history.startNew}
                     </Button>
                   </>
                 )}
@@ -449,7 +453,8 @@ export function HistoryView() {
                         const [year, month, day] = date.split('-').map(Number);
                         dateString = format(
                           new Date(year, month - 1, day),
-                          'MMMM d, yyyy',
+                          t.history.dateFormat,
+                          { locale: getDateLocale() },
                         );
                       } catch (error) {
                         Sentry.captureException(error, { extra: { date } });
@@ -504,9 +509,9 @@ export function HistoryView() {
 
       <button
         type="button"
-        aria-label="Create new item"
+        aria-label={t.sidebar.newCreation}
         onClick={() => navigate({ to: '/' })}
-        className="fixed bottom-8 right-8 flex h-14 w-14 items-center justify-center rounded-full bg-adam-neutral-100 text-adam-neutral-950 shadow-[0_4px_32px_rgba(0,0,0,0.48)] md:hidden"
+        className="fixed bottom-8 end-8 flex h-14 w-14 items-center justify-center rounded-full bg-adam-neutral-100 text-adam-neutral-950 shadow-[0_4px_32px_rgba(0,0,0,0.48)] md:hidden"
       >
         <Plus className="h-10 w-10 stroke-[2px]" />
       </button>

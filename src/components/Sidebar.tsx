@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { Conversation, ConversationSettings } from '@shared/types';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { useProfile } from '@/services/profileService';
+import { useLang } from '@/i18n';
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -45,6 +46,7 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
+  const { t, dir } = useLang();
 
   // Get 10 most recent conversations
   const { data: recentConversations } = useQuery<Conversation[]>({
@@ -84,11 +86,13 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
   const renderUserSectionTrigger = () => {
     if (isSidebarOpen) {
       return (
-        <div className="flex cursor-pointer items-center space-x-3 rounded-md px-2 py-1.5 transition-colors hover:bg-accent-foreground">
+        <div className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-accent-foreground">
           <UserAvatar />
           <div className="flex flex-col">
             <span className="text-sm font-medium text-adam-text-primary">
-              {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+              {profile?.full_name ||
+                user?.email?.split('@')[0] ||
+                t.sidebar.user}
             </span>
             <span className="text-xs text-adam-text-tertiary dark:text-gray-400">
               {user?.email}
@@ -101,7 +105,7 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
     return (
       <Button
         variant="adam_dark_collapsed_avatar"
-        className="group ml-[1px] h-[46px] w-[46px] px-0 py-6"
+        className="group ms-[1px] h-[46px] w-[46px] px-0 py-6"
       >
         <UserAvatar className="h-[30px] w-[30px] transition-all duration-200 ease-in-out group-hover:h-[26px] group-hover:w-[26px] group-hover:ring-2 group-hover:ring-adam-neutral-500" />
       </Button>
@@ -124,16 +128,19 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
             wrapper={(children) => (
               <Tooltip>
                 <TooltipTrigger asChild>{children}</TooltipTrigger>
-                <TooltipContent side="right" className="flex flex-col">
-                  <span className="font-semibold">New Creation</span>
+                <TooltipContent
+                  side={dir === 'rtl' ? 'left' : 'right'}
+                  className="flex flex-col"
+                >
+                  <span className="font-semibold">{t.sidebar.newCreation}</span>
                   <span className="text-xs text-muted-foreground">
-                    Start a new conversation
+                    {t.sidebar.newCreationHint}
                   </span>
                 </TooltipContent>
               </Tooltip>
             )}
           >
-            <div className="ml-[9px]">
+            <div className="ms-[9px]">
               <Button
                 variant="secondary"
                 className={` ${
@@ -148,7 +155,7 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
                 />
                 {isSidebarOpen && (
                   <div className="text-sm font-semibold leading-[14px] tracking-[-0.14px] text-adam-neutral-200">
-                    New Creation
+                    {t.sidebar.newCreation}
                   </div>
                 )}
               </Button>
@@ -158,9 +165,9 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
             {[
               {
                 icon: LayoutGrid,
-                label: 'Creations',
+                label: t.sidebar.creations,
                 href: '/history' as const,
-                description: 'View past creations',
+                description: t.sidebar.creationsHint,
                 submenu: recentConversations,
               },
             ].map(({ icon: Icon, label, href, description, submenu }) => (
@@ -170,7 +177,10 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
                   wrapper={(children) => (
                     <Tooltip>
                       <TooltipTrigger asChild>{children}</TooltipTrigger>
-                      <TooltipContent side="right" className="flex flex-col">
+                      <TooltipContent
+                        side={dir === 'rtl' ? 'left' : 'right'}
+                        className="flex flex-col"
+                      >
                         <span className="font-semibold">{label}</span>
                         <span className="text-xs text-muted-foreground">
                           {description}
@@ -184,16 +194,16 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
                       isSidebarOpen ? 'adam_dark' : 'adam_dark_collapsed'
                     }
                     onClick={() => sidebarNavigate(href)}
-                    className={`${isSidebarOpen ? 'w-full justify-start' : 'ml-[1px] h-[46px] w-[46px] p-0'}`}
+                    className={`${isSidebarOpen ? 'w-full justify-start' : 'ms-[1px] h-[46px] w-[46px] p-0'}`}
                   >
                     <Icon
-                      className={`${isSidebarOpen ? 'mr-2' : ''} h-[22px] w-[22px] min-w-[22px]`}
+                      className={`${isSidebarOpen ? 'me-2' : ''} h-[22px] w-[22px] min-w-[22px]`}
                     />
                     {isSidebarOpen && label}
                   </Button>
                 </ConditionalWrapper>
                 {isSidebarOpen && submenu && (
-                  <ul className="ml-7 flex list-none flex-col gap-1 border-l border-adam-neutral-500 px-2">
+                  <ul className="ms-7 flex list-none flex-col gap-1 border-s border-adam-neutral-500 px-2">
                     {submenu.map(
                       (
                         conversation: Omit<
@@ -239,14 +249,14 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
               <DropdownMenuContent
                 className="w-56"
                 align="end"
-                side={isMobile ? 'top' : 'right'}
+                side={isMobile ? 'top' : dir === 'rtl' ? 'left' : 'right'}
               >
-                <div className="flex items-center space-x-2 p-2">
+                <div className="flex items-center gap-2 p-2">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium text-adam-text-primary">
                       {profile?.full_name ||
                         user?.email?.split('@')[0] ||
-                        'User'}
+                        t.sidebar.user}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {user?.email}
@@ -257,15 +267,17 @@ function DesktopSidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
                 <DropdownMenuGroup className="text-adam-text-primary">
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <Settings className="me-2 h-4 w-4" />
+                      <span>{t.sidebar.settings}</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4 text-adam-text-primary" />
-                  <span className="text-adam-text-primary">Sign out</span>
+                  <LogOut className="me-2 h-4 w-4 text-adam-text-primary" />
+                  <span className="text-adam-text-primary">
+                    {t.sidebar.signOut}
+                  </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -283,6 +295,7 @@ function MobileSidebar({
   setIsSidebarOpen,
 }: SidebarProps) {
   const [open, setOpen] = useState(false);
+  const { t, dir } = useLang();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -290,21 +303,19 @@ function MobileSidebar({
         <Button
           variant="ghost"
           size="icon"
-          className="fixed left-2 top-2.5 z-50 hover:bg-adam-neutral-700 md:hidden"
+          className="fixed start-2 top-2.5 z-50 hover:bg-adam-neutral-700 md:hidden"
         >
           <Menu className="h-5 w-5 text-adam-text-primary" />
         </Button>
       </SheetTrigger>
       <SheetContent
-        side="left"
+        side={dir === 'rtl' ? 'right' : 'left'}
         className="bg-adam-bg-dark p-0 [&>button]:text-white"
       >
         {/* For aria stuff */}
         <SheetHeader className="hidden">
           <SheetTitle className="text-adam-text-primary">clic3d</SheetTitle>
-          <SheetDescription>
-            AI-powered CAD software for everyone
-          </SheetDescription>
+          <SheetDescription>{t.sidebar.tagline}</SheetDescription>
         </SheetHeader>
         <DesktopSidebar isSidebarOpen={true} setIsSidebarOpen={setOpen} />
       </SheetContent>

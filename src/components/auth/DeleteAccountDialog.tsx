@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
 import posthog from 'posthog-js';
 import { apiJson } from '@/services/api';
+import { useT } from '@/i18n';
 
 type CancellationFeedback =
   | 'customer_service'
@@ -33,6 +34,7 @@ export const DeleteAccountDialog = ({
 }) => {
   const [confirmText, setConfirmText] = useState('');
   const { toast } = useToast();
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedReason, setSelectedReason] =
@@ -54,9 +56,8 @@ export const DeleteAccountDialog = ({
     onError: (error) => {
       Sentry.captureException(error);
       toast({
-        title: 'Delete failed',
-        description:
-          'We could not delete your account. Please try again or contact support.',
+        title: t.deleteAccount.failedTitle,
+        description: t.deleteAccount.failedDesc,
         variant: 'destructive',
       });
     },
@@ -70,11 +71,11 @@ export const DeleteAccountDialog = ({
           <div className="flex flex-col gap-16">
             <AlertDialogHeader className="text-center sm:text-center">
               <AlertDialogTitle className="w-full">
-                We're sad to see you go :(
+                {t.deleteAccount.sadTitle}
               </AlertDialogTitle>
             </AlertDialogHeader>
             <div className="flex flex-col gap-6">
-              <div className="text-sm">What made you cancel your plan?</div>
+              <div className="text-sm">{t.deleteAccount.whyLeaving}</div>
               <RadioGroup
                 value={selectedReason}
                 className="flex flex-col gap-6"
@@ -84,35 +85,35 @@ export const DeleteAccountDialog = ({
                     onClick={() => setSelectedReason('too_expensive')}
                     value="too_expensive"
                   />
-                  Too Expensive
+                  {t.deleteAccount.tooExpensive}
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                   <RadioGroupItem
                     onClick={() => setSelectedReason('missing_features')}
                     value="missing_features"
                   />
-                  Missing features
+                  {t.deleteAccount.missingFeatures}
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                   <RadioGroupItem
                     onClick={() => setSelectedReason('low_quality')}
                     value="low_quality"
                   />
-                  Low quality or bugs
+                  {t.deleteAccount.lowQuality}
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                   <RadioGroupItem
                     onClick={() => setSelectedReason('unused')}
                     value="unused"
                   />
-                  I don't need it anymore
+                  {t.deleteAccount.unused}
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                   <RadioGroupItem
                     onClick={() => setSelectedReason('switched_service')}
                     value="switched_service"
                   />
-                  I've found another tool
+                  {t.deleteAccount.switched}
                 </label>
               </RadioGroup>
             </div>
@@ -127,7 +128,7 @@ export const DeleteAccountDialog = ({
                   setStep(1);
                 }}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button
                 variant="black"
@@ -135,7 +136,7 @@ export const DeleteAccountDialog = ({
                 onClick={() => setStep(2)}
                 disabled={!selectedReason}
               >
-                Next
+                {t.common.next}
               </Button>
             </div>
           </div>
@@ -143,34 +144,31 @@ export const DeleteAccountDialog = ({
           <div className="flex flex-col gap-16">
             <AlertDialogHeader className="text-center sm:text-center">
               <AlertDialogTitle className="w-full">
-                Are you sure?
+                {t.deleteAccount.areYouSure}
               </AlertDialogTitle>
             </AlertDialogHeader>
             <div className="space-y-4">
-              <p>Deleting your account means:</p>
+              <p>{t.deleteAccount.means}</p>
               <div className="rounded-lg bg-adam-neutral-950 p-4 text-adam-neutral-100">
-                <ul className="list-disc space-y-2 pl-5 text-sm">
-                  <li>
-                    Deleting your account is permanent and cannot be undone.
-                  </li>
-                  <li>
-                    Your data will be deleted within 30 days, except we may
-                    retain a limited set of data for longer where required or
-                    permitted by law.
-                  </li>
+                <ul className="list-disc space-y-2 ps-5 text-sm">
+                  <li>{t.deleteAccount.permanent}</li>
+                  <li>{t.deleteAccount.dataRetention}</li>
                 </ul>
               </div>
             </div>
             <div className="space-y-2">
               <p>
-                Type <span className="font-semibold text-red-500">DELETE</span>{' '}
-                to confirm
+                {t.deleteAccount.typeToConfirmBefore}{' '}
+                <span className="font-semibold text-red-500">
+                  {t.deleteAccount.confirmWord}
+                </span>{' '}
+                {t.deleteAccount.typeToConfirmAfter}
               </p>
               <Input
                 className="rounded-none border-x-0 border-b border-t-0 border-adam-neutral-200 shadow-none ring-0 focus:border-adam-neutral-200 focus:ring-0"
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="DELETE"
+                placeholder={t.deleteAccount.confirmWord}
               />
             </div>
             <div className="grid w-full grid-cols-2 gap-5">
@@ -184,15 +182,18 @@ export const DeleteAccountDialog = ({
                   setStep(1);
                 }}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button
                 variant="destructive"
                 className="w-full rounded-full"
-                disabled={confirmText !== 'DELETE' || isDeleting}
+                disabled={
+                  confirmText.trim() !== t.deleteAccount.confirmWord ||
+                  isDeleting
+                }
                 onClick={() => deleteUser()}
               >
-                DELETE
+                {t.deleteAccount.confirmWord}
               </Button>
             </div>
           </div>

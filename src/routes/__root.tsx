@@ -1,13 +1,14 @@
 import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router';
 import App from '@/App';
 import '@/index.css';
+import { LANG_BOOT_SCRIPT } from '@/i18n';
 
 const assetUrl = (path: string) =>
   `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}${path.replace(/^\//, '')}`;
 
 export const Route = createRootRoute({
   head: () => ({
-    meta: [{ title: 'CADAM' }],
+    meta: [{ title: 'clic3d' }],
   }),
   component: RootComponent,
   errorComponent: ({ error }) => (
@@ -27,8 +28,11 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // lang/dir réels posés par LANG_BOOT_SCRIPT (avant le bundle) puis par
+    // applyDocumentLang() : le shell prérendu ne connaît pas ?lang.
+    <html lang="fr" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: LANG_BOOT_SCRIPT }} />
         <meta charSet="UTF-8" />
         <meta
           name="viewport"

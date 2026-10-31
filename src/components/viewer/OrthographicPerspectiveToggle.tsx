@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from '@/components/ui/tooltip';
+import { getT } from '@/i18n';
 
 interface OrthographicPerspectiveToggleProps {
   isOrthographic: boolean;
@@ -30,7 +31,7 @@ export function OrthographicPerspectiveToggle({
             side="top"
             className="border-adam-neutral-700 bg-adam-background-2 text-adam-text-primary"
           >
-            <p>Orthographic View</p>
+            <p>{getT().viewer.orthographic}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -51,7 +52,7 @@ export function OrthographicPerspectiveToggle({
             side="top"
             className="border-adam-neutral-700 bg-adam-background-2 text-adam-text-primary"
           >
-            <p>Perspective View</p>
+            <p>{getT().viewer.perspective}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

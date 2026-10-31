@@ -2,9 +2,11 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from '@tanstack/react-router';
 import * as Sentry from '@sentry/react';
 import { useEffect } from 'react';
+import { useT } from '@/i18n';
 
 export function ErrorView({ error }: { error?: unknown }) {
   const navigate = useNavigate();
+  const t = useT();
 
   useEffect(() => {
     if (error) {
@@ -15,14 +17,14 @@ export function ErrorView({ error }: { error?: unknown }) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-adam-bg-secondary-dark">
       <h1 className="text-2xl font-bold text-adam-text-primary">
-        Oops! Something went wrong.
+        {t.errorView.title}
       </h1>
       <p className="text-center text-adam-text-secondary">
-        We're sorry, but an error occurred while loading this page.
+        {t.errorView.line1}
         <br />
-        Please feel free to reach out to us so that we can resolve this issue.
+        {t.errorView.line2}
       </p>
-      <Button onClick={() => navigate({ to: '/' })}>Go to Home</Button>
+      <Button onClick={() => navigate({ to: '/' })}>{t.errorView.home}</Button>
     </div>
   );
 }

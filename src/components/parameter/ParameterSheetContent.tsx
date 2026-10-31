@@ -18,6 +18,8 @@ import {
   type DxfExporter,
 } from '@/utils/downloadUtils';
 import { useToast } from '@/hooks/use-toast';
+import { useT } from '@/i18n';
+import { DirectionProvider } from '@radix-ui/react-direction';
 
 interface ParameterSheetContentProps {
   parameters: Parameter[];
@@ -37,6 +39,7 @@ export function ParameterSheetContent({
   code,
 }: ParameterSheetContentProps) {
   const { toast } = useToast();
+  const t = useT();
   const [selectedFormat, setSelectedFormat] = useState<DownloadFormat>('stl');
   const [isExporting, setIsExporting] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,11 +123,8 @@ export function ParameterSheetContent({
     } catch (error) {
       console.error('[OpenSCAD] Failed to export DXF:', error);
       toast({
-        title: 'DXF export failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'clic3d could not export this model as DXF.',
+        title: t.params.dxfFailed,
+        description: t.params.dxfFailedDesc,
         variant: 'destructive',
       });
     } finally {
@@ -154,11 +154,12 @@ export function ParameterSheetContent({
       <ScrollArea className="min-h-0 w-full flex-1 px-4">
         <div className="flex flex-col gap-6 pb-4 pt-2">
           {parameters.map((param) => (
-            <ParameterInput
-              key={param.name}
-              param={param}
-              handleCommit={handleCommit}
-            />
+            // Noms de variables OpenSCAD : tels quels, en LTR.
+            <div key={param.name} dir="ltr">
+              <DirectionProvider dir="ltr">
+                <ParameterInput param={param} handleCommit={handleCommit} />
+              </DirectionProvider>
+            </div>
           ))}
         </div>
       </ScrollArea>
@@ -167,13 +168,13 @@ export function ParameterSheetContent({
           <Button
             onClick={handleDownload}
             disabled={isDownloadDisabled}
-            aria-label={`download ${selectedFormat.toUpperCase()} file`}
-            className="flex-1 rounded-r-none bg-adam-neutral-50 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
+            aria-label={t.params.downloadFormat(selectedFormat.toUpperCase())}
+            className="flex-1 rounded-e-none bg-adam-neutral-50 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
           >
             {isExporting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
             )}
             {selectedFormat.toUpperCase()}
           </Button>
@@ -181,8 +182,8 @@ export function ParameterSheetContent({
             <DropdownMenuTrigger asChild>
               <Button
                 disabled={!isAnyFormatAvailable}
-                aria-label="select download format"
-                className="rounded-l-none border-l border-adam-neutral-300 bg-adam-neutral-50 px-2 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
+                aria-label={t.params.selectFormat}
+                className="rounded-s-none border-s border-adam-neutral-300 bg-adam-neutral-50 px-2 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
               >
                 <ChevronUp className="h-4 w-4" />
               </Button>
@@ -195,7 +196,7 @@ export function ParameterSheetContent({
               >
                 <span className="text-sm">.STL</span>
                 <span className="col-span-2 text-xs text-adam-text-primary/60">
-                  3D Printing
+                  {t.params.format3dPrint}
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -205,7 +206,7 @@ export function ParameterSheetContent({
               >
                 <span className="text-sm">.SCAD</span>
                 <span className="col-span-2 text-xs text-adam-text-primary/60">
-                  OpenSCAD Code
+                  {t.params.formatScad}
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -215,7 +216,7 @@ export function ParameterSheetContent({
               >
                 <span className="text-sm">.DXF</span>
                 <span className="col-span-2 text-xs text-adam-text-primary/60">
-                  2D Projection to the (x,y) plane
+                  {t.params.formatDxf}
                 </span>
               </DropdownMenuItem>
             </DropdownMenuContent>

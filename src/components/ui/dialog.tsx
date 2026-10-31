@@ -3,6 +3,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 
 import { cn } from '@/lib/utils';
+import { getT } from '@/i18n';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -42,9 +43,9 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:bg-adam-neutral-800/50 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent">
+      <DialogPrimitive.Close className="absolute end-4 top-4 rounded-sm text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:bg-adam-neutral-800/50 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent">
         <Cross2Icon className="h-4 w-4" />
-        <span className="sr-only">Close</span>
+        <span className="sr-only">{getT().common.close}</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
@@ -57,7 +58,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col space-y-1.5 text-center sm:text-left',
+      'flex flex-col space-y-1.5 text-center sm:text-start',
       className,
     )}
     {...props}
@@ -71,7 +72,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+      'flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2',
       className,
     )}
     {...props}

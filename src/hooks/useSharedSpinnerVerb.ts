@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import { pickSpinnerVerb, SPINNER_VERBS } from '@/constants/spinnerVerbs';
+import { getSpinnerVerbs, pickSpinnerVerb } from '@/constants/spinnerVerbs';
 
 const VERB_ROTATE_MS = 2800;
 
-let currentVerb = SPINNER_VERBS[0] ?? 'Thinking';
+let currentVerb: string | undefined;
 let rotateInterval: ReturnType<typeof setInterval> | undefined;
 const listeners = new Set<() => void>();
 
@@ -33,6 +33,8 @@ function subscribeDisabled() {
 }
 
 function getSnapshot() {
+  // Résolu au premier appel (côté client) pour suivre la langue de l'URL.
+  if (currentVerb === undefined) currentVerb = getSpinnerVerbs()[0] ?? '…';
   return currentVerb;
 }
 

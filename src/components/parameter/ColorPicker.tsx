@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { getT } from '@/i18n';
 
 interface ColorPickerProps {
   color: string;
@@ -52,7 +53,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <button
-          aria-label="Toggle color picker"
+          aria-label={getT().params.toggleColorPicker}
           ref={triggerRef}
           className="relative inline-flex h-6 w-fit items-center gap-2 overflow-hidden rounded-md bg-adam-neutral-800 pl-2 pr-1 text-xs text-adam-neutral-10 transition-colors duration-200 ease-out focus:outline-none [@media(hover:hover)]:hover:bg-adam-neutral-700"
         >

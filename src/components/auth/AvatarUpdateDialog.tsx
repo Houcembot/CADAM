@@ -13,11 +13,13 @@ import Cropper from 'react-easy-crop';
 import { useUploadAvatar } from '@/services/profileService';
 import { useToast } from '@/hooks/use-toast';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { useT } from '@/i18n';
 
 export const AvatarUpdateDialog = () => {
   const { mutate: uploadAvatar, isPending: isUploadingAvatar } =
     useUploadAvatar();
   const { toast } = useToast();
+  const t = useT();
   // Avatar crop state
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
@@ -113,18 +115,15 @@ export const AvatarUpdateDialog = () => {
       uploadAvatar(file, {
         onSuccess: () => {
           toast({
-            title: 'Profile picture updated',
-            description: 'Your profile picture has been successfully updated.',
+            title: t.avatar.updated,
+            description: t.avatar.updatedDesc,
           });
         },
         onError: (error) => {
           console.error('Error uploading avatar:', error);
           toast({
-            title: 'Upload failed',
-            description:
-              error instanceof Error
-                ? error.message
-                : 'Failed to upload profile picture. Please try again.',
+            title: t.avatar.uploadFailed,
+            description: t.avatar.uploadFailedDesc,
             variant: 'destructive',
           });
         },
@@ -138,8 +137,8 @@ export const AvatarUpdateDialog = () => {
     } catch (e) {
       console.error(e);
       toast({
-        title: 'Crop failed',
-        description: 'Unable to crop image. Please try another image.',
+        title: t.avatar.cropFailed,
+        description: t.avatar.cropFailedDesc,
         variant: 'destructive',
       });
     }
@@ -178,7 +177,7 @@ export const AvatarUpdateDialog = () => {
         <DialogContent className="border-adam-neutral-800 sm:max-w-[480px] sm:rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-adam-neutral-50">
-              Crop profile picture
+              {t.avatar.cropTitle}
             </DialogTitle>
           </DialogHeader>
           <div className="relative h-72 w-full overflow-hidden rounded-md bg-black/20">
@@ -197,7 +196,9 @@ export const AvatarUpdateDialog = () => {
             )}
           </div>
           <div className="mt-4">
-            <div className="mb-2 text-xs text-adam-neutral-200">Zoom</div>
+            <div className="mb-2 text-xs text-adam-neutral-200">
+              {t.avatar.zoom}
+            </div>
             <Slider
               value={[zoom]}
               min={1}
@@ -212,7 +213,7 @@ export const AvatarUpdateDialog = () => {
               onClick={handleCropCancel}
               className="w-full rounded-full font-light"
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               onClick={handleCropSave}
@@ -223,10 +224,10 @@ export const AvatarUpdateDialog = () => {
               {isUploadingAvatar ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
+                  {t.common.saving}
                 </div>
               ) : (
-                'Save'
+                t.common.save
               )}
             </Button>
           </DialogFooter>

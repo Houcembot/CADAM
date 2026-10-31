@@ -20,6 +20,7 @@ import { Share as ShareIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShareContent } from '@/components/ui/ShareContent';
+import { useT } from '@/i18n';
 
 interface ChatTitleProps {
   activeMeshId?: string | null;
@@ -32,6 +33,7 @@ export function ChatTitle({
 }: ChatTitleProps = {}) {
   const { conversation, updateConversation } = useConversation();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const t = useT();
   const [titleInput, setTitleInput] = useState(conversation.title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +105,7 @@ export function ChatTitle({
               <Input
                 ref={inputRef}
                 className={cn(
-                  'h-8 w-full bg-transparent px-2 text-left text-[17px] font-medium leading-tight tracking-tight text-adam-neutral-10 selection:bg-adam-blue/50 selection:text-white',
+                  'h-8 w-full bg-transparent px-2 text-start text-[17px] font-medium leading-tight tracking-tight text-adam-neutral-10 selection:bg-adam-blue/50 selection:text-white',
                   'rounded-none border-x-0 border-b-2 border-t-0 border-adam-neutral-500',
                   'focus:border-adam-neutral-500 focus:outline-none focus:ring-0',
                   isParametric && isMobile && 'text-center',
@@ -169,23 +171,23 @@ export function ChatTitle({
                           className="text-adam-neutral-200 hover:text-adam-neutral-100"
                           onClick={() => setIsEditingTitle(true)}
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Rename
+                          <Pencil className="me-2 h-4 w-4" />
+                          {t.history.rename}
                         </DropdownMenuItem>
                         <DialogTrigger asChild>
                           <DropdownMenuItem className="text-adam-neutral-200 hover:text-adam-neutral-100">
-                            <ShareIcon className="mr-2 h-4 w-4" />
-                            Share
+                            <ShareIcon className="me-2 h-4 w-4" />
+                            {t.editor.share}
                           </DropdownMenuItem>
                         </DialogTrigger>
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <DialogContent className="mx-auto flex max-h-dvh w-[calc(100%-2rem)] flex-col items-center gap-8 rounded-lg border border-adam-neutral-800 text-adam-text-primary">
                       <DialogTitle className="hidden">
-                        Share public link to chat
+                        {t.share.title}
                       </DialogTitle>
                       <DialogDescription className="hidden">
-                        Share public link to chat
+                        {t.share.title}
                       </DialogDescription>
                       <ShareContent
                         conversationId={conversation.id}
@@ -201,7 +203,7 @@ export function ChatTitle({
                   <div className="flex h-8 w-fit items-center rounded font-medium tracking-tight text-adam-neutral-10 transition-colors duration-200 hover:bg-black hover:text-adam-neutral-0">
                     <span
                       className={cn(
-                        'line-clamp-1 cursor-pointer px-2 text-left text-[17px]',
+                        'line-clamp-1 cursor-pointer px-2 text-start text-[17px]',
                         isParametric && 'text-center',
                       )}
                       onClick={() => setIsEditingTitle(true)}
@@ -216,7 +218,7 @@ export function ChatTitle({
               <div className="flex h-8 w-fit items-center rounded font-medium tracking-tight text-adam-neutral-10">
                 <span
                   className={cn(
-                    'line-clamp-1 px-2 text-left text-[17px]',
+                    'line-clamp-1 px-2 text-start text-[17px]',
                     isParametric && 'text-center',
                   )}
                 >

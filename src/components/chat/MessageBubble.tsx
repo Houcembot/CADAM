@@ -52,6 +52,7 @@ import { Streamdown } from 'streamdown';
 import type { Model } from '@shared/types';
 import type { ModelConfig } from '@/types/misc';
 import { useConversation } from '@/contexts/ConversationContext';
+import { formatNumber, getT } from '@/i18n';
 
 type MessageBubbleProps = {
   message: TreeNode<ChatMessage>;
@@ -209,7 +210,7 @@ function UserBubble({
 
   return (
     <div className="flex justify-start">
-      <div className="mr-2 mt-1">
+      <div className="me-2 mt-1">
         <UserAvatar className="h-9 w-9 border border-adam-neutral-700 bg-adam-neutral-950 p-0" />
       </div>
       <div
@@ -229,7 +230,7 @@ function UserBubble({
                   <img
                     key={`img-${index}`}
                     src={part.url}
-                    alt={part.filename ?? 'Uploaded image'}
+                    alt={part.filename ?? getT().chat.uploadedImage}
                     className="h-20 w-20 rounded-lg object-cover"
                   />
                 );
@@ -238,7 +239,7 @@ function UserBubble({
                 <UploadedImage
                   key={`img-${index}`}
                   id={id}
-                  alt={part.filename ?? 'Uploaded image'}
+                  alt={part.filename ?? getT().chat.uploadedImage}
                 />
               );
             })}
@@ -258,8 +259,7 @@ function UserBubble({
             key={`pref-${index}`}
             className="w-fit rounded-full bg-adam-neutral-800 px-2 py-1 text-xs text-adam-text-secondary"
           >
-            {part.data.topology} · {part.data.polygonCount.toLocaleString()}{' '}
-            polys
+            {part.data.topology} · {formatNumber(part.data.polygonCount)} polys
           </span>
         ))}
 
@@ -286,14 +286,14 @@ function UserBubble({
                 isEditing ? 'opacity-0' : '',
               )}
             >
-              <span>{isEditing ? input : text}</span>
+              <span dir="auto">{isEditing ? input : text}</span>
               <br />
             </div>
           </div>
         )}
 
         {showActions && (
-          <div className="absolute bottom-[-1.5rem] right-2 flex items-center gap-0.5 rounded-sm border border-adam-neutral-700 bg-adam-bg-secondary-dark p-0.5">
+          <div className="absolute bottom-[-1.5rem] end-2 flex items-center gap-0.5 rounded-sm border border-adam-neutral-700 bg-adam-bg-secondary-dark p-0.5">
             {!isEditing ? (
               <>
                 {onEditUserText && (
@@ -315,7 +315,7 @@ function UserBubble({
                           <Pencil className="h-3 w-3 p-0 text-adam-neutral-100" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Edit</TooltipContent>
+                      <TooltipContent>{getT().chat.edit}</TooltipContent>
                     </Tooltip>
                     <Separator
                       orientation="vertical"
@@ -339,7 +339,7 @@ function UserBubble({
                         )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Copy Prompt</TooltipContent>
+                    <TooltipContent>{getT().chat.copyPrompt}</TooltipContent>
                   </Tooltip>
                 )}
                 {onSelectLeaf && message.siblings.length > 1 && (
@@ -402,8 +402,10 @@ function AssistantBubble({
   onRestore,
 }: MessageBubbleProps) {
   const { conversation } = useConversation();
-  const modelOptions =
-    conversation.type === 'creative' ? CREATIVE_MODELS : PARAMETRIC_MODELS;
+  // Noms de modèles traduits (même table que ModelSelector).
+  const modelOptions = (
+    conversation.type === 'creative' ? CREATIVE_MODELS : PARAMETRIC_MODELS
+  ).map((m) => ({ ...m, ...getT().models[m.id] }));
   const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set());
 
   const text = useMemo(
@@ -436,7 +438,7 @@ function AssistantBubble({
 
   return (
     <div className="flex min-w-0 justify-start">
-      <div className="mr-2 mt-1">
+      <div className="me-2 mt-1">
         <Avatar className="h-9 w-9 border border-adam-neutral-700 bg-adam-neutral-950">
           <div style={{ padding: '0.6rem 0.5rem 0.5rem 0.55rem' }}>
             <AvatarImage
@@ -453,6 +455,7 @@ function AssistantBubble({
             return (
               <div
                 key={index}
+                dir="auto"
                 className="chat-markdown min-w-0 max-w-full overflow-hidden rounded-lg bg-adam-neutral-800 px-3 py-2 text-sm text-adam-text-primary"
               >
                 <Streamdown parseIncompleteMarkdown>{part.text}</Streamdown>
@@ -520,10 +523,10 @@ function AssistantBubble({
                 icon={<Box className="h-4 w-4" />}
                 title={
                   part.state === 'output-error'
-                    ? 'CAD generation failed'
+                    ? getT().chat.cadFailed
                     : artifact
                       ? artifact.title
-                      : 'Building CAD...'
+                      : getT().chat.buildingCad
                 }
                 loading={part.state === 'input-available'}
                 expanded={isOpen}
@@ -547,17 +550,27 @@ function AssistantBubble({
                 }
               >
                 {part.state === 'output-error' ? (
-                  <div className="border-b border-adam-neutral-700 p-3 text-xs text-red-300">
+                  // Diagnostic technique destiné au modèle (OpenSCAD) : laissé
+                  // tel quel, en LTR.
+                  <div
+                    dir="ltr"
+                    className="border-b border-adam-neutral-700 p-3 text-start text-xs text-red-300"
+                  >
                     {part.errorText}
                   </div>
                 ) : outputMessage ? (
+                  // Le message de l'outil est une consigne pour le modèle (en
+                  // anglais) : on affiche un statut traduit à la place.
                   <div className="border-b border-adam-neutral-700 p-3 text-xs text-adam-neutral-300">
-                    {outputMessage}
+                    {getT().chat.compileSuccess}
                   </div>
                 ) : null}
                 {artifact?.code ? (
                   <ScrollArea className="h-80 w-full">
-                    <pre className="m-0 whitespace-pre-wrap break-words p-3 text-xs text-adam-neutral-200">
+                    <pre
+                      dir="ltr"
+                      className="m-0 whitespace-pre-wrap break-words p-3 text-left text-xs text-adam-neutral-200"
+                    >
                       <code>{artifact.code}</code>
                     </pre>
                   </ScrollArea>
@@ -582,6 +595,7 @@ function AssistantBubble({
             return (
               <div
                 key={index}
+                dir="auto"
                 className="chat-markdown min-w-0 max-w-full overflow-hidden rounded-lg bg-adam-neutral-800 px-3 py-2 text-sm text-adam-text-primary"
               >
                 <Streamdown parseIncompleteMarkdown>{answerMessage}</Streamdown>
@@ -620,8 +634,8 @@ function AssistantBubble({
                   variant="outline"
                   size="icon"
                   onClick={() => onChangeRating(message.rating === 1 ? 0 : 1)}
-                  className="h-6 w-6 rounded-lg rounded-r-none border-r-0 p-0 pl-0.5"
-                  aria-label="Thumbs up"
+                  className="h-6 w-6 rounded-lg rounded-e-none border-e-0 p-0 ps-0.5"
+                  aria-label={getT().chat.thumbsUp}
                 >
                   <ThumbsUp
                     className={cn(
@@ -640,8 +654,8 @@ function AssistantBubble({
                   variant="outline"
                   size="icon"
                   onClick={() => onChangeRating(message.rating === -1 ? 0 : -1)}
-                  className="h-6 w-6 rounded-lg rounded-l-none border-l-0 p-0 pr-0.5"
-                  aria-label="Thumbs down"
+                  className="h-6 w-6 rounded-lg rounded-s-none border-s-0 p-0 pe-0.5"
+                  aria-label={getT().chat.thumbsDown}
                 >
                   <ThumbsDown
                     className={cn(
@@ -663,12 +677,12 @@ function AssistantBubble({
                     size="icon"
                     className="h-6 w-6 rounded-lg p-0"
                     onClick={() => navigator.clipboard.writeText(text)}
-                    aria-label="Copy"
+                    aria-label={getT().chat.copy}
                   >
                     <Copy className="h-3 w-3 text-adam-neutral-100" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Copy</TooltipContent>
+                <TooltipContent>{getT().chat.copy}</TooltipContent>
               </Tooltip>
             )}
 
@@ -681,12 +695,12 @@ function AssistantBubble({
                     onClick={onRestore}
                     disabled={isLoading}
                     className="h-6 w-6 rounded-lg p-0"
-                    aria-label="Restore this version"
+                    aria-label={getT().chat.restoreVersion}
                   >
                     <History className="h-3 w-3 text-adam-neutral-100" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Restore</TooltipContent>
+                <TooltipContent>{getT().chat.restore}</TooltipContent>
               </Tooltip>
             )}
 
@@ -703,14 +717,14 @@ function AssistantBubble({
                       disabled={isLoading || !currentModel}
                       className={cn(
                         'h-6 w-6 rounded-lg p-0',
-                        modelOptions.length > 1 && 'rounded-r-none border-r-0',
+                        modelOptions.length > 1 && 'rounded-e-none border-e-0',
                       )}
-                      aria-label="Retry"
+                      aria-label={getT().chat.retry}
                     >
                       <RefreshCw className="h-3 w-3 text-adam-neutral-100" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Retry</TooltipContent>
+                  <TooltipContent>{getT().chat.retry}</TooltipContent>
                 </Tooltip>
                 {modelOptions.length > 1 && (
                   <RetryModelDropdown
@@ -772,10 +786,10 @@ function RetryModelDropdown({
           variant="outline"
           disabled={disabled}
           className={cn(
-            'h-6 w-fit gap-1 rounded-lg rounded-l-none px-2 text-xs text-adam-text-primary',
+            'h-6 w-fit gap-1 rounded-lg rounded-s-none px-2 text-xs text-adam-text-primary',
             isOpen && 'bg-adam-neutral-800',
           )}
-          aria-label="Retry with another model"
+          aria-label={getT().chat.retryOtherModel}
         >
           <span>{selectedModel.name}</span>
           <ChevronDown
@@ -829,7 +843,7 @@ function BranchNavigation({
         className="h-6 w-6 rounded-sm p-0 hover:bg-adam-neutral-800"
         onClick={onPrev}
       >
-        <ChevronLeft className="h-3 w-3 p-0 text-adam-neutral-100" />
+        <ChevronLeft className="h-3 w-3 p-0 text-adam-neutral-100 rtl:-scale-x-100" />
       </Button>
       <span className="text-xs text-adam-neutral-300">
         {branchIndex + 1}/{branchCount}
@@ -841,7 +855,7 @@ function BranchNavigation({
         className="h-6 w-6 rounded-sm p-0 hover:bg-adam-neutral-800"
         onClick={onNext}
       >
-        <ChevronRight className="h-3 w-3 p-0 text-adam-neutral-100" />
+        <ChevronRight className="h-3 w-3 p-0 text-adam-neutral-100 rtl:-scale-x-100" />
       </Button>
     </>
   );
@@ -886,7 +900,7 @@ function ToolBlock({
         <button
           type="button"
           className={cn(
-            'flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left',
+            'flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-start',
             !onPrimary && 'cursor-default',
           )}
           onClick={onPrimary}
@@ -903,7 +917,7 @@ function ToolBlock({
           <button
             type="button"
             onClick={onToggle}
-            aria-label={expanded ? 'Hide code' : 'Show code'}
+            aria-label={expanded ? getT().chat.hideCode : getT().chat.showCode}
             className={cn(
               'flex w-9 shrink-0 items-center justify-center transition-opacity focus-visible:opacity-100',
               expanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
@@ -979,10 +993,10 @@ function MeshToolBlock({
 
   const title =
     isError || meshStatus === 'failure'
-      ? 'Mesh generation failed'
+      ? getT().chat.meshFailed
       : meshStatus === 'success'
-        ? '3D Object'
-        : 'Generating mesh...';
+        ? getT().chat.object3d
+        : getT().chat.generatingMesh;
 
   return (
     <ToolBlock

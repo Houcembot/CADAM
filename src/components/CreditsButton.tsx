@@ -1,6 +1,7 @@
 import { Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { formatNumber, useT } from '@/i18n';
 
 function formatCompact(n: number): string {
   if (n >= 1_000_000) {
@@ -11,7 +12,7 @@ function formatCompact(n: number): string {
     const v = n / 1_000;
     return `${v >= 100 ? v.toFixed(0) : v.toFixed(1)}K`;
   }
-  return n.toLocaleString();
+  return formatNumber(n);
 }
 
 // clic3d-cadam: a simple, non-interactive credit balance pill. The upstream
@@ -20,11 +21,12 @@ function formatCompact(n: number): string {
 // an in-app dollar subscription.
 export function CreditsButton() {
   const { user, billing } = useAuth();
+  const t = useT();
   const credits = billing?.tokens.total ?? 0;
   if (!user) return null;
   return (
     <div
-      aria-label="Tokens"
+      aria-label={t.balance.label}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full',
         'bg-adam-neutral-950 px-3 py-1.5 text-sm font-medium',
@@ -32,7 +34,7 @@ export function CreditsButton() {
       )}
     >
       <Zap className="h-3.5 w-3.5" fill="currentColor" />
-      <span>{formatCompact(credits)} tokens</span>
+      <span dir="auto">{t.balance.amount(formatCompact(credits))}</span>
     </div>
   );
 }

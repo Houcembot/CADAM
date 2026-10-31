@@ -72,8 +72,8 @@ export function Layout() {
             <div
               className={`absolute z-20 transition-all duration-300 ease-in-out ${
                 isSidebarOpen && !isMobile
-                  ? 'right-[2.25rem] top-[2.25rem]'
-                  : 'right-3.5 top-3.5'
+                  ? 'end-[2.25rem] top-[2.25rem]'
+                  : 'end-3.5 top-3.5'
               }`}
             >
               <CreditsButton />
@@ -85,7 +85,7 @@ export function Layout() {
               variant="ghost"
               size="icon"
               className={`bg-adam-neutral-3000 fixed z-10 h-7 w-7 rounded-md text-gray-400 transition-all duration-300 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-10 ${
-                isSidebarOpen ? 'left-[272px]' : 'left-20'
+                isSidebarOpen ? 'start-[272px]' : 'start-20'
               } ${
                 location.pathname === '/' && isSidebarOpen
                   ? 'top-[2.25rem]'
@@ -93,7 +93,7 @@ export function Layout() {
               }`}
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="h-4 w-4 rtl:-scale-x-100" />
             </Button>
           )}
           <div className="h-full bg-adam-bg-dark">

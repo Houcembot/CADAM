@@ -64,6 +64,7 @@ import { useMeshFiles } from '@/contexts/MeshFilesContext';
 import { AnimatePresence, motion } from 'framer-motion';
 import { apiJson } from '@/services/api';
 import { z } from 'zod';
+import { useLang } from '@/i18n';
 
 const promptResponseSchema = z.object({ prompt: z.string().optional() });
 
@@ -463,7 +464,7 @@ function TextAreaChat({
   onSubmit,
   onFocus,
   isLoading = false,
-  placeholder = 'What can clic3d help you build today?',
+  placeholder,
   type,
   stopGenerating,
   disabled = false,
@@ -487,6 +488,7 @@ function TextAreaChat({
     useState('');
   const prevIsDraggingRef = useRef(isDragging);
   const { toast } = useToast();
+  const { t, dir: uiDir } = useLang();
   const { session } = useAuth();
   const { images, mesh, setImages, setMesh } = useItemSelection();
   const meshFiles = useMeshFiles();
@@ -670,15 +672,15 @@ function TextAreaChat({
   // Helper to decide which placeholder we're targeting right now
   const computeTargetPlaceholder = useCallback(() => {
     if (type === 'creative') {
-      if (images.length > 0) return 'Edit uploaded image...';
+      if (images.length > 0) return t.input.creativeEditImage;
       // Model-specific placeholders
-      if (model === 'quality') return 'Make a rough 3D asset...';
-      if (model === 'fast') return 'Make a textureless 3D asset...';
-      if (model === 'ultra') return 'Make a production ready 3D asset...';
-      return 'Speak anything into existence...';
+      if (model === 'quality') return t.input.creativeDraft;
+      if (model === 'fast') return t.input.creativeTextureless;
+      if (model === 'ultra') return t.input.creativeUltra;
+      return t.input.creativeDefault;
     }
-    return placeholder;
-  }, [type, images.length, placeholder, model]);
+    return placeholder ?? t.input.placeholder;
+  }, [type, images.length, placeholder, model, t]);
 
   // The text currently shown in the placeholder (animates)
   const [placeholderAnim, setPlaceholderAnim] = useState('');
@@ -820,8 +822,8 @@ function TextAreaChat({
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to upload image',
+        title: t.common.error,
+        description: t.input.uploadImageFailed,
         variant: 'destructive',
       });
     },
@@ -886,8 +888,8 @@ function TextAreaChat({
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to upload mesh',
+        title: t.common.error,
+        description: t.input.uploadMeshFailed,
         variant: 'destructive',
       });
     },
@@ -963,29 +965,26 @@ function TextAreaChat({
     // Show specific errors first, then generic error only if there are truly invalid file types
     if (hasSmallImages) {
       toast({
-        title: 'Image too small',
-        description:
-          'Some images were not added because they are smaller than 256x256 pixels.',
+        title: t.input.imageTooSmall,
+        description: t.input.imageTooSmallDesc,
       });
     } else if (hasLargeImages) {
       toast({
-        title: 'Image too large',
-        description:
-          'Some images were not added because they are larger than 100MB.',
+        title: t.input.imageTooLarge,
+        description: t.input.imageTooLargeDesc,
       });
     } else if (hasInvalidImages) {
       toast({
-        title: 'Invalid image format',
-        description:
-          'Some images were not added because they are not valid image formats. Must be jpeg, png, or webp.',
+        title: t.input.invalidImageFormat,
+        description: t.input.invalidImageFormatDesc,
       });
     } else if (hasInvalidItems) {
       toast({
-        title: 'Invalid file format',
+        title: t.input.invalidFileFormat,
         description:
           type === 'creative'
-            ? 'Some files were not added because they are not valid file formats. Must be jpeg, png, webp, glb, stl, or obj.'
-            : 'Some files were not added because they are not valid file formats. Must be jpeg, png, webp, or stl.',
+            ? t.input.invalidFileFormatCreative
+            : t.input.invalidFileFormatParametric,
       });
     }
 
@@ -1192,8 +1191,8 @@ function TextAreaChat({
     } catch (error) {
       console.error('Error generating prompt:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to generate prompt',
+        title: t.common.error,
+        description: t.input.generatePromptFailed,
         variant: 'destructive',
       });
     } finally {
@@ -1373,7 +1372,7 @@ function TextAreaChat({
                     color: isDragHover ? '#00A6FF' : 'rgba(0, 166, 255, 0.85)',
                   }}
                 >
-                  Add more images here
+                  {t.input.addMoreImages}
                 </p>
               </div>
             ) : /* Case 2: No items (images/mesh are zero) -> Show original "Drop images and 3D models here" logic */
@@ -1397,7 +1396,7 @@ function TextAreaChat({
                     color: isDragHover ? '#00A6FF' : 'rgba(0, 166, 255, 0.85)',
                   }}
                 >
-                  Drop images and 3D models here
+                  {t.input.dropHere}
                 </p>
               </div>
             ) : (
@@ -1529,7 +1528,7 @@ function TextAreaChat({
             <div className="h-full w-full p-1.5">
               <img
                 src={`${import.meta.env.BASE_URL}/Adam-Logo.png`}
-                alt="Adam Logo"
+                alt=""
                 className="h-full w-full object-contain"
               />
             </div>
@@ -1539,6 +1538,9 @@ function TextAreaChat({
               disabled={isLoading || disabled}
               value={input}
               ref={textareaRef}
+              // Vide : sens de l'interface (sinon le placeholder arabe
+              // s'affiche en LTR) ; rempli : sens du texte saisi.
+              dir={input ? 'auto' : uiDir}
               translate="no"
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
@@ -1586,7 +1588,7 @@ function TextAreaChat({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {input.trim() ? 'Enhance Prompt' : 'Generate Prompt'}
+                {input.trim() ? t.input.enhancePrompt : t.input.generatePrompt}
               </TooltipContent>
             </Tooltip>
           )}
@@ -1643,13 +1645,15 @@ function TextAreaChat({
                     }}
                   >
                     <Box className="h-4 w-4" />
-                    <span className="hidden text-xs lg:inline">Mesh</span>
+                    <span className="hidden text-xs lg:inline">
+                      {t.input.meshMode}
+                    </span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   {type === 'parametric'
-                    ? 'Switch to Creative mode'
-                    : 'Switch to Parametric mode'}
+                    ? t.input.switchToCreative
+                    : t.input.switchToParametric}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -1704,7 +1708,7 @@ function TextAreaChat({
                     <Square className="h-5 w-5 fill-white" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Stop generation</TooltipContent>
+                <TooltipContent>{t.input.stopGeneration}</TooltipContent>
               </Tooltip>
             ) : (
               <button

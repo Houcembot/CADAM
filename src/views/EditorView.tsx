@@ -52,6 +52,7 @@ import { Loader2, Share } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageItem } from '../types/misc.ts';
 import { ConversationView } from './ConversationView';
+import { useT } from '@/i18n';
 
 /**
  * Route-level entry for `/editor/$id`.
@@ -67,6 +68,7 @@ export default function EditorView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const t = useT();
   const [images, setImages] = useState<MessageItem[]>([]);
   const [mesh, setMesh] = useState<MessageItem | null>(null);
 
@@ -141,7 +143,7 @@ export default function EditorView() {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-adam-bg-secondary-dark text-adam-text-primary">
         <span className="text-2xl font-medium">404</span>
-        <span className="text-sm">Conversation not found</span>
+        <span className="text-sm">{t.editor.notFound}</span>
       </div>
     );
   }
@@ -186,6 +188,7 @@ function ConversationEditor() {
   const { user, billing } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const t = useT();
   const totalTokens = billing?.tokens.total ?? 0;
 
   // ── Per-conversation UI state ───────────────────────────────────────────
@@ -634,7 +637,7 @@ function ConversationEditor() {
               that sits in the left gutter when the chat panel is collapsed,
               so the title and share button don't get covered. */}
           <div className="flex w-full items-center justify-between bg-transparent p-3 md:pl-12">
-            <div className="flex min-w-0 flex-1 items-center space-x-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <div className="min-w-0 flex-1">
                 <ChatTitle
                   activeMeshId={
@@ -658,7 +661,7 @@ function ConversationEditor() {
                     className="flex h-8 items-center gap-2 rounded-full px-3 text-adam-text-primary hover:bg-adam-neutral-950 hover:text-adam-neutral-10 focus-visible:ring-0"
                   >
                     <Share className="h-[14px] w-[14px] min-w-[14px]" />
-                    <span>Share</span>
+                    <span>{t.editor.share}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -691,7 +694,7 @@ function ConversationEditor() {
                 onClick={() => {
                   navigate({ to: '/' });
                 }}
-                aria-label="New Creation"
+                aria-label={t.sidebar.newCreation}
               >
                 <CreateIcon className="h-5 w-5 text-adam-text-primary" />
               </Button>
@@ -734,7 +737,7 @@ function ConversationEditor() {
             <MeshPreview meshId={activePreview.meshId} />
           ) : (
             <div className="text-sm text-adam-text-secondary">
-              Send a message to start creating
+              {t.editor.sendToStart}
             </div>
           )}
         </div>
@@ -756,7 +759,7 @@ function ConversationEditor() {
             <MeshPreview meshId={activePreview.meshId} />
           ) : (
             <div className="text-sm text-adam-text-secondary">
-              Send a message to start creating
+              {t.editor.sendToStart}
             </div>
           )}
         </div>

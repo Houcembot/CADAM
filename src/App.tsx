@@ -7,6 +7,9 @@ import { MeshFilesProvider } from '@/contexts/MeshFilesContext';
 import { PostHogProvider } from '@/contexts/PostHogProvider';
 import { ErrorView } from '@/views/ErrorView';
 import { isSupabaseConfigMissing } from '@/lib/supabase';
+import { useEffect } from 'react';
+import { applyDocumentLang, getDir } from '@/i18n';
+import { DirectionProvider } from '@radix-ui/react-direction';
 
 const queryClient = new QueryClient();
 
@@ -22,23 +25,31 @@ function MissingConfig() {
 }
 
 function App({ error }: { error?: unknown }) {
+  // Filet de sécurité si le script de tête n'a pas pu s'exécuter.
+  useEffect(() => {
+    applyDocumentLang();
+  }, []);
+
   if (isSupabaseConfigMissing) {
     return <MissingConfig />;
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PostHogProvider>
-          <MeshFilesProvider>
-            <TooltipProvider delayDuration={0}>
-              <Toaster />
-              {error !== undefined ? <ErrorView error={error} /> : <Outlet />}
-            </TooltipProvider>
-          </MeshFilesProvider>
-        </PostHogProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    // Sens de lecture transmis aux composants Radix (menus, défilement…).
+    <DirectionProvider dir={getDir()}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <PostHogProvider>
+            <MeshFilesProvider>
+              <TooltipProvider delayDuration={0}>
+                <Toaster />
+                {error !== undefined ? <ErrorView error={error} /> : <Outlet />}
+              </TooltipProvider>
+            </MeshFilesProvider>
+          </PostHogProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </DirectionProvider>
   );
 }
 

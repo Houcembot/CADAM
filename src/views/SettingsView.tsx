@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import * as Sentry from '@sentry/react';
 import { useProfile, useUpdateProfile } from '@/services/profileService';
 import { AvatarUpdateDialog } from '@/components/auth/AvatarUpdateDialog';
+import { useT } from '@/i18n';
 
 export default function SettingsView() {
   const { user, resetPassword } = useAuth();
@@ -18,6 +19,7 @@ export default function SettingsView() {
   const { mutate: updateProfile, isPending: isUpdateLoading } =
     useUpdateProfile();
   const { toast } = useToast();
+  const t = useT();
   const [newName, setNewName] = useState(profile?.full_name || '');
   const [editingName, setEditingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -40,15 +42,15 @@ export default function SettingsView() {
           setEditingName(false);
           setNewName(profile?.full_name || '');
           toast({
-            title: 'Success',
-            description: 'Your name has been updated',
+            title: t.common.success,
+            description: t.settings.nameUpdated,
           });
         },
         onError: (e) => {
           Sentry.captureException(e);
           toast({
-            title: 'Error',
-            description: 'Failed to update name',
+            title: t.common.error,
+            description: t.settings.nameUpdateFailed,
             variant: 'destructive',
           });
         },
@@ -64,15 +66,15 @@ export default function SettingsView() {
       {
         onSuccess: () => {
           toast({
-            title: 'Success',
-            description: 'Your notifications have been updated',
+            title: t.common.success,
+            description: t.settings.notificationsUpdated,
           });
         },
         onError: (e) => {
           Sentry.captureException(e);
           toast({
-            title: 'Error',
-            description: 'Failed to update notifications',
+            title: t.common.error,
+            description: t.settings.notificationsUpdateFailed,
             variant: 'destructive',
           });
         },
@@ -88,15 +90,14 @@ export default function SettingsView() {
       },
       onSuccess: () => {
         toast({
-          title: 'Success',
-          description:
-            'Password reset instructions have been sent to your email',
+          title: t.common.success,
+          description: t.settings.resetSent,
         });
       },
       onError: () => {
         toast({
-          title: 'Error',
-          description: 'Failed to reset password',
+          title: t.common.error,
+          description: t.settings.resetFailed,
           variant: 'destructive',
         });
       },
@@ -107,10 +108,10 @@ export default function SettingsView() {
       <div className="w-full max-w-xl">
         <header className="mb-8">
           <h1 className="text-2xl font-medium tracking-tight text-adam-neutral-50">
-            Paramètres
+            {t.settings.title}
           </h1>
           <p className="mt-1 text-sm text-adam-neutral-200">
-            Manage your account and preferences.
+            {t.settings.subtitle}
           </p>
         </header>
 
@@ -118,7 +119,7 @@ export default function SettingsView() {
           {/* Account */}
           <section className="rounded-xl border border-adam-neutral-800 bg-adam-background-2 p-6">
             <h2 className="mb-5 text-sm font-medium text-adam-neutral-50">
-              Account
+              {t.settings.account}
             </h2>
 
             <div className="divide-y divide-adam-neutral-800">
@@ -155,7 +156,7 @@ export default function SettingsView() {
                       {isUpdateLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        'Save'
+                        t.common.save
                       )}
                     </Button>
                     <Button
@@ -166,7 +167,7 @@ export default function SettingsView() {
                       variant="dark"
                       className="rounded-full font-light"
                     >
-                      Cancel
+                      {t.common.cancel}
                     </Button>
                   </div>
                 ) : (
@@ -175,23 +176,30 @@ export default function SettingsView() {
                     variant="dark"
                     className="flex-shrink-0 rounded-full font-light"
                   >
-                    Edit
+                    {t.common.edit}
                   </Button>
                 )}
               </div>
 
               <div className="py-5">
-                <div className="text-sm text-adam-neutral-50">Email</div>
-                <div className="mt-0.5 truncate text-xs text-adam-neutral-200">
+                <div className="text-sm text-adam-neutral-50">
+                  {t.settings.email}
+                </div>
+                <div
+                  dir="ltr"
+                  className="mt-0.5 truncate text-xs text-adam-neutral-200 rtl:text-right"
+                >
                   {user?.email}
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-4 pt-5">
                 <div className="min-w-0">
-                  <div className="text-sm text-adam-neutral-50">Password</div>
+                  <div className="text-sm text-adam-neutral-50">
+                    {t.settings.password}
+                  </div>
                   <div className="mt-0.5 text-xs text-adam-neutral-200">
-                    Send a reset link to your email
+                    {t.settings.passwordHint}
                   </div>
                 </div>
                 <Button
@@ -203,7 +211,7 @@ export default function SettingsView() {
                   {isResetLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    'Reset Password'
+                    t.settings.resetPassword
                   )}
                 </Button>
               </div>
@@ -213,14 +221,16 @@ export default function SettingsView() {
           {/* Notifications */}
           <section className="rounded-xl border border-adam-neutral-800 bg-adam-background-2 p-6">
             <h2 className="mb-5 text-sm font-medium text-adam-neutral-50">
-              Notifications
+              {t.settings.notifications}
             </h2>
 
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <div className="text-sm text-adam-neutral-50">Responses</div>
+                <div className="text-sm text-adam-neutral-50">
+                  {t.settings.responses}
+                </div>
                 <div className="mt-0.5 text-xs leading-relaxed text-adam-neutral-200">
-                  Get notified when clic3d finishes a long-running request.
+                  {t.settings.responsesHint}
                 </div>
               </div>
               <Switch
@@ -234,16 +244,16 @@ export default function SettingsView() {
           {/* Data & Privacy */}
           <section className="rounded-xl border border-adam-neutral-800 bg-adam-background-2 p-6">
             <h2 className="mb-5 text-sm font-medium text-adam-neutral-50">
-              Data and privacy
+              {t.settings.dataPrivacy}
             </h2>
 
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="text-sm text-adam-neutral-50">
-                  Delete account
+                  {t.settings.deleteAccount}
                 </div>
                 <div className="mt-0.5 text-xs leading-relaxed text-adam-neutral-200">
-                  Permanently delete your account and all associated data.
+                  {t.settings.deleteAccountHint}
                 </div>
               </div>
               <DeleteAccountDialog>
@@ -251,7 +261,7 @@ export default function SettingsView() {
                   className="flex-shrink-0 rounded-full font-light"
                   variant="destructive"
                 >
-                  Delete
+                  {t.common.delete}
                 </Button>
               </DeleteAccountDialog>
             </div>
@@ -262,7 +272,7 @@ export default function SettingsView() {
               to="/terms-of-service"
               className="transition-colors hover:text-adam-neutral-50"
             >
-              Terms of Service
+              {t.settings.terms}
             </Link>
             <span aria-hidden className="text-adam-neutral-700">
               •
@@ -271,7 +281,7 @@ export default function SettingsView() {
               to="/privacy-policy"
               className="transition-colors hover:text-adam-neutral-50"
             >
-              Privacy Policy
+              {t.settings.privacy}
             </Link>
           </div>
         </div>
