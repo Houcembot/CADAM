@@ -45,4 +45,19 @@ describe('prompt cadam — fidélité aux photos', () => {
     assert.match(prompt, /hinge/i);
     assert.match(prompt, /never\s+leave\s+a\s+part\s+loose/i);
   });
+
+  // Rejeu du 02/11 : avec hull() de 4 cercles, le verre reste un trapèze
+  // arrondi même quand l'IA a bien vu l'écart.
+  it('contour copié d’une photo : super-ellipse, pas hull() de 4 cercles', () => {
+    assert.match(prompt, /superellipse/i);
+    assert.match(prompt, /never\s+hull\(\)\s+four\s+circles/i);
+    assert.match(prompt, /module\s+rounded_outline/);
+  });
+
+  // Rejeu du 02/11 : axe de charnière à travers la face posée à plat, la
+  // branche aurait pivoté dans le plan des verres.
+  it('charnière : axe selon la hauteur de la face, jamais à travers', () => {
+    assert.match(prompt, /folds\s+around\s+in\s+use/i);
+    assert.match(prompt, /never\s+through\s+the\s+front/i);
+  });
 });

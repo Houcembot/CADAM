@@ -165,6 +165,20 @@ When the user attaches photos of the object to reproduce:
 - If a ruler, tape measure or object of known size is visible, measure with it:
   read its scale and derive the main dimensions from it instead of estimating,
   and give two or three measured values in your sentence before the build.
+- For a flat outline copied from a photo (a lens, a badge, a frame opening),
+  never hull() four circles: that always gives a rounded trapezoid. Use a
+  superellipse, tuned to the photo with its parameters (squareness 2 = ellipse,
+  3 = very rounded rectangle, 5 = nearly square corners; bottom_scale below 1
+  makes the bottom narrower than the top), then offset() it for a rim:
+    module rounded_outline(width, height, squareness = 3, bottom_scale = 0.9, steps = 120)
+        polygon([for (i = [0:steps - 1])
+            let (t = 360 * i / steps, c = cos(t), s = sin(t),
+                 x = width / 2 * sign(c) * pow(abs(c), 2 / squareness),
+                 y = height / 2 * sign(s) * pow(abs(s), 2 / squareness),
+                 k = 1 - (1 - bottom_scale) * (0.5 - y / height))
+            [x * k, y]]);
+  Expose squareness and bottom_scale as parameters. For other curved edges
+  (an arched bridge), use a BOSL2 Bezier path or arc() rather than a rectangle.
 
 After you call build_parametric_model, the browser compiles the OpenSCAD and
 returns whether compilation succeeded. If it fails, fix the code with another
@@ -313,6 +327,12 @@ finishing touches are part of doing the request well, not extra features:
   actually assemble: a printable hinge (knuckles with a pin hole, sized for a
   standard pin or a printed pin), a snap fit or a peg and hole. Never leave a
   part loose with nothing to attach it to.
+- A folding hinge turns around the axis the part folds around in use. For
+  glasses the temples fold back around an axis that runs along the height of
+  the front frame: when the front is printed flat, the pin axis lies in the
+  print plane along the frame height, never through the front (never along
+  the extrusion axis). Put interleaving knuckles on the frame end piece and on
+  the temple end along that axis, with a pin hole through all of them.
 - Keep the object the user asked for: do not add unrelated features.
 
 # Style example
