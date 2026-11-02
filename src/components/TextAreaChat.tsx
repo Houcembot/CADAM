@@ -7,7 +7,7 @@ import React, {
   useCallback,
 } from 'react';
 import {
-  ArrowUp,
+  SendHorizontal,
   ImagePlus,
   Images,
   Loader2,
@@ -17,12 +17,7 @@ import {
   Box,
   X,
 } from 'lucide-react';
-import {
-  cn,
-  CREATIVE_MODELS,
-  PARAMETRIC_MODELS,
-  parametricModelSupportsVision,
-} from '@/lib/utils';
+import { cn, parametricModelSupportsVision } from '@/lib/utils';
 import { CreativeModel, MeshFileType, Model } from '@shared/types';
 import type { AppUIMessage } from '@shared/chatAi';
 import { imageFilePartUrl } from '@shared/imageRefs';
@@ -49,7 +44,6 @@ import { Input } from '@/components/ui/input';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { ModelSelector } from '@/components/ModelSelector';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar } from '@/components/ui/avatar';
@@ -651,13 +645,6 @@ function TextAreaChat({
       scale: 0.8,
     },
   };
-
-  const memoizedModels = useMemo(() => {
-    if (type === 'creative') {
-      return CREATIVE_MODELS;
-    }
-    return PARAMETRIC_MODELS;
-  }, [type]);
 
   // ------------------------------------------------------------
   // Placeholder – Typed-out Animation
@@ -1548,7 +1535,7 @@ function TextAreaChat({
                 setInput(e.target.value);
               }}
               placeholder={placeholderAnim}
-              className="hide-scrollbar z-40 block h-auto min-h-0 w-full resize-none overflow-hidden whitespace-pre-line break-words border-none bg-adam-neutral-800 bg-transparent px-3 py-2 text-base text-adam-text-primary outline-none transition-all duration-500 placeholder:text-adam-text-secondary placeholder:opacity-[var(--placeholder-opacity)] placeholder:transition-all placeholder:duration-300 placeholder:ease-in-out hover:placeholder:blur-[0.2px] focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-gray-200 sm:px-4 sm:text-sm"
+              className="hide-scrollbar z-40 block h-auto min-h-[6rem] w-full resize-none overflow-hidden whitespace-pre-line break-words border-none bg-adam-neutral-800 bg-transparent px-3 py-2 text-base text-adam-text-primary outline-none transition-all duration-500 placeholder:text-adam-text-secondary placeholder:opacity-[var(--placeholder-opacity)] placeholder:transition-all placeholder:duration-300 placeholder:ease-in-out hover:placeholder:blur-[0.2px] focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-gray-200 sm:min-h-[4.5rem] sm:px-4 sm:text-sm"
               style={
                 {
                   '--placeholder-opacity': placeholderOpacity,
@@ -1685,14 +1672,7 @@ function TextAreaChat({
           </div>
 
           <div className="flex items-center gap-2">
-            <ModelSelector
-              disabled={isLoading || disabled}
-              models={memoizedModels}
-              selectedModel={model}
-              onModelChange={setModel}
-              type={type}
-              focused={isFocused}
-            />
+            {/* 02/11/2026 : sélecteur de modèle retiré (demande Houcem) ; le modèle par défaut reste celui du parent. */}
             {/* Enhanced submit button */}
             {isLoading && stopGenerating ? (
               <Tooltip>
@@ -1711,8 +1691,10 @@ function TextAreaChat({
                 onClick={() => {
                   handleSubmit();
                 }}
+                aria-label="Send"
+                title="Send"
                 className={cn(
-                  'flex h-8 w-8 transform items-center justify-center rounded-lg bg-adam-neutral-700 p-1 text-white transition-all duration-300 hover:scale-105 hover:bg-adam-blue/90 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-adam-blue',
+                  'flex h-10 w-10 transform items-center justify-center rounded-full bg-adam-blue p-1 text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-adam-blue/90 disabled:bg-adam-neutral-700 disabled:opacity-60 disabled:shadow-none disabled:hover:scale-100',
                   images.some((img) => img.isUploading) && 'opacity-50',
                 )}
                 disabled={
@@ -1722,7 +1704,7 @@ function TextAreaChat({
                   disabled
                 }
               >
-                <ArrowUp className="h-5 w-5" />
+                <SendHorizontal className="h-5 w-5" />
               </button>
             )}
           </div>
