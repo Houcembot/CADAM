@@ -48,4 +48,14 @@ describe('prompt cadam — roue dentée de rechange', () => {
   it('récapitulatif des valeurs avant impression', () => {
     assert.match(section, /teeth,\s+module,\s+outer\s+diameter/i);
   });
+
+  // Banc du 02/11 : pignon de 10 dents mesuré 25 mm -> module 2, mais BOSL2
+  // décale le profil des petits pignons et sort 25,7 mm.
+  it('petits pignons : décalage de profil calculé depuis le diamètre mesuré', () => {
+    assert.match(
+      section,
+      /profile_shift\s*=\s*\(measured\s+outer\s+diameter\s*\/\s*module\s*-\s*teeth\s*-\s*2\)\s*\/\s*2/i,
+    );
+    assert.match(section, /fewer\s+than\s+17\s+teeth/i);
+  });
 });

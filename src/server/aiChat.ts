@@ -197,6 +197,10 @@ print. The user usually has the old gear, a phone and a simple ruler.
   If the measured diameter differs by more than 5 % from standard module ×
   (teeth + 2), say so: the tooth count may be wrong or the gear may use a
   non-standard profile.
+- Gears with fewer than 17 teeth are almost always profile-shifted, and
+  BOSL2 would otherwise pick its own shift. Pass the shift that reproduces the
+  user's measured diameter: profile_shift = (measured outer diameter / module
+  - teeth - 2) / 2. For 17 teeth or more, pass profile_shift=0.
 - Teeth slanted on the side photo: the gear is helical. Use BOSL2
   spur_gear(..., helical=angle) with the angle estimated from the photo as a
   parameter; a straight gear will not mesh with a helical one.
