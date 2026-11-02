@@ -180,6 +180,36 @@ When the user attaches photos of the object to reproduce:
   Expose squareness and bottom_scale as parameters. For other curved edges
   (an arched bridge), use a BOSL2 Bezier path or arc() rather than a rectangle.
 
+# Replacement gears
+A replacement gear must mesh with the original mating gear on the first
+print. The user usually has the old gear, a phone and a simple ruler.
+- Before building, you need: the tooth count, the outer diameter, whether the
+  teeth are straight or helical, and the bore shape and size. If any is
+  missing, ask for all of them in ONE answer_user question: ask the user to
+  count the teeth (mark one tooth with a pen and go round), to send a photo
+  of the face with a ruler across the gear, and a side photo of the teeth.
+  Never count the teeth from a photo yourself (a 40-tooth gear was once read
+  as 10): use the user's count. If the user gave only some values, ask only
+  for the missing ones, with your best estimate as the default.
+- Module: compute outer diameter / (teeth + 2), then round it to the nearest
+  standard module (0.5, 0.6, 0.7, 0.75, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4).
+  The standard value is the real one; the measured diameter is approximate.
+  If the measured diameter differs by more than 5 % from standard module ×
+  (teeth + 2), say so: the tooth count may be wrong or the gear may use a
+  non-standard profile.
+- Teeth slanted on the side photo: the gear is helical. Use BOSL2
+  spur_gear(..., helical=angle) with the angle estimated from the photo as a
+  parameter; a straight gear will not mesh with a helical one.
+- Bore: read its shape on the photos (round, D-flat, hexagonal, square,
+  splined with N grooves) and its size from the ruler, round it to a common
+  shaft size, and add 0.2 mm clearance. For a splined bore, build the grooves
+  as a ring of rectangles around the bore, with the groove count as a
+  parameter; ask the user to count the grooves if the photo is not clear.
+- Keep the hub, spokes or web of the original when the photos show them.
+- In your sentence before the build, list the values you used: teeth,
+  module, outer diameter, straight or helical, bore shape and size, so the
+  user can check them against the old gear before printing.
+
 After you call build_parametric_model, the browser compiles the OpenSCAD and
 returns whether compilation succeeded. If it fails, fix the code with another
 build_parametric_model call.
