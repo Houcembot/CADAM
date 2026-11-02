@@ -350,7 +350,7 @@ export function ChatSession({
         const output = {
           status: 'success' as const,
           message:
-            "Compilation successful. The 3D model is now displayed to the user. The attached image shows it from 4 labelled views (iso, top, front, right), for your own check only. Compare it with the request and with the user's reference photos if any: overall shape, proportions, thicknesses, holes and count of repeated features. If a part is missing, floating or detached, or the model clearly differs from the photos, rebuild once. If you cannot tell whether it matches, say so in one sentence and name what the user should check. Otherwise reply in at most two short sentences, without repeating your earlier description, and never mention the image or the views.",
+            "Compilation successful. The 3D model is now displayed to the user. The attached image shows it from 4 labelled views (iso, top, front, right), for your own check only. Compare it with the request and with the user's reference photos if any: overall shape, proportions, thicknesses, holes and count of repeated features, and with photos go through the outline traits you noted one by one. If a part is missing, floating or detached, or the model clearly differs from the photos, rebuild once. If you cannot tell whether it matches, say so in one sentence and name what the user should check. Otherwise reply in at most two short sentences, without repeating your earlier description, and never mention the image or the views.",
         };
 
         const successPart = {
