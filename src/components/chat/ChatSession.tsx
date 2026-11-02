@@ -9,7 +9,11 @@ import { previewScadColoredViaToolWorker } from '@/worker/toolWorker';
 import { apiUrl } from '@/services/api';
 import { messageRowToChatMessage, type ChatMessage } from '@/lib/aiMessages';
 import { supabase } from '@/lib/supabase';
-import { generateColoredPreview, generatePreview } from '@/utils/meshUtils';
+import {
+  generateCheckImage,
+  generateColoredPreview,
+  generatePreview,
+} from '@/utils/meshUtils';
 import type {
   AppUIMessage,
   ConversationSuggestionsUpdate,
@@ -324,11 +328,29 @@ export function ChatSession({
         } catch (uploadError) {
           console.warn('Failed to upload OpenSCAD preview:', uploadError);
         }
+        // 02/11/2026 : image d'auto-contrôle (4 vues, fond clair) lue par le
+        // serveur à la place de la vignette ; la vignette affichée ne change pas.
+        try {
+          if (user?.id) {
+            const checkBlob = await fetch(
+              await generateCheckImage(stl, off ?? null),
+            ).then((response) => response.blob());
+            await supabase.storage
+              .from('images')
+              .upload(
+                `${user.id}/${conversation.id}/check-${toolCall.toolCallId}`,
+                checkBlob,
+                { contentType: 'image/png', upsert: true },
+              );
+          }
+        } catch (checkError) {
+          console.warn('Failed to upload OpenSCAD check image:', checkError);
+        }
 
         const output = {
           status: 'success' as const,
           message:
-            'Compilation successful. The 3D model is now displayed to the user. The attached image is a render of it, for your own check only: compare it with the request. If a part is missing, floating or detached, rebuild once. Otherwise reply in at most two short sentences, without repeating your earlier description, and never mention it (render, preview, image, view) or what you could check.',
+            "Compilation successful. The 3D model is now displayed to the user. The attached image shows it from 4 labelled views (iso, top, front, right), for your own check only. Compare it with the request and with the user's reference photos if any: overall shape, proportions, thicknesses, holes and count of repeated features. If a part is missing, floating or detached, or the model clearly differs from the photos, rebuild once. If you cannot tell whether it matches, say so in one sentence and name what the user should check. Otherwise reply in at most two short sentences, without repeating your earlier description, and never mention the image or the views.",
         };
 
         const successPart = {

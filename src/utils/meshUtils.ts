@@ -364,3 +364,154 @@ export const applyMaterialAdjustments = (
   // Ensure material updates
   material.needsUpdate = true;
 };
+
+// 02/11/2026 — Image d'auto-contrôle pour l'IA (distincte de la vignette).
+// Lunettes du 02/11 : une seule vue de biais, bleu foncé sur fond gris foncé,
+// monture fine illisible → l'IA a validé une pièce non conforme aux photos.
+// Ici : 4 vues orthographiques (biais, dessus, face, côté) sur fond clair,
+// en 2×2, chaque case étiquetée, densité de pixels fixe (1) quel que soit
+// l'appareil (sur iPhone, l'ancienne image faisait 3000 px).
+const CHECK_CELL = 700;
+const CHECK_VIEWS: { label: string; dir: [number, number, number] }[] = [
+  // Repère three.js après la rotation -90° X appliquée au modèle OpenSCAD :
+  // dessus OpenSCAD (+Z) = +Y ici ; face OpenSCAD (-Y) = +Z ici ; droite = +X.
+  { label: 'ISO', dir: [1, 1, 1] },
+  { label: 'TOP (+Z)', dir: [0, 1, 0.0001] },
+  { label: 'FRONT (-Y)', dir: [0, 0, 1] },
+  { label: 'RIGHT (+X)', dir: [1, 0, 0] },
+];
+
+function renderCheckViews(scene: THREE.Scene): string {
+  const box = new THREE.Box3().setFromObject(scene);
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+  const diagonal = Math.max(
+    Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z),
+    1e-3,
+  );
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true,
+  });
+  renderer.setPixelRatio(1);
+  renderer.setSize(CHECK_CELL, CHECK_CELL);
+  renderer.toneMapping = THREE.NoToneMapping;
+
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  const renderScene = new THREE.Scene();
+  renderScene.background = new THREE.Color(0xd4d8de);
+  renderScene.environment = pmremGenerator.fromScene(
+    new RoomEnvironment(),
+    0.04,
+  ).texture;
+  renderScene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  renderScene.add(scene);
+
+  const out = document.createElement('canvas');
+  out.width = CHECK_CELL * 2;
+  out.height = CHECK_CELL * 2;
+  const ctx = out.getContext('2d');
+  if (!ctx) throw new Error('2d context unavailable');
+
+  CHECK_VIEWS.forEach((view, i) => {
+    const dir = new THREE.Vector3(...view.dir).normalize();
+    // Cadrage serré sur l'étendue projetée (pas la diagonale) pour que les
+    // pièces fines restent lisibles dans les vues de face et de côté.
+    const camera = new THREE.OrthographicCamera(
+      -1,
+      1,
+      1,
+      -1,
+      0.1,
+      diagonal * 10,
+    );
+    camera.position.copy(center).addScaledVector(dir, diagonal * 2);
+    camera.up.set(0, 1, 0);
+    if (Math.abs(dir.y) > 0.99) camera.up.set(0, 0, -1);
+    camera.lookAt(center);
+    camera.updateMatrixWorld();
+    const inv = camera.matrixWorldInverse;
+    let halfW = 0;
+    let halfH = 0;
+    for (const x of [box.min.x, box.max.x])
+      for (const y of [box.min.y, box.max.y])
+        for (const z of [box.min.z, box.max.z]) {
+          const p = new THREE.Vector3(x, y, z).applyMatrix4(inv);
+          halfW = Math.max(halfW, Math.abs(p.x));
+          halfH = Math.max(halfH, Math.abs(p.y));
+        }
+    const half = Math.max(halfW, halfH, diagonal * 0.02) * 1.08;
+    camera.left = -half;
+    camera.right = half;
+    camera.top = half;
+    camera.bottom = -half;
+    camera.updateProjectionMatrix();
+
+    const light = new THREE.DirectionalLight(0xffffff, 1.1);
+    light.position
+      .copy(camera.position)
+      .add(new THREE.Vector3(0.3, 0.5, 0.2).multiplyScalar(diagonal));
+    renderScene.add(light);
+    renderer.render(renderScene, camera);
+    renderScene.remove(light);
+
+    const x = (i % 2) * CHECK_CELL;
+    const y = Math.floor(i / 2) * CHECK_CELL;
+    ctx.drawImage(renderer.domElement, x, y);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(x + 8, y + 8, 150, 30);
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(view.label, x + 16, y + 30);
+  });
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(CHECK_CELL, 0);
+  ctx.lineTo(CHECK_CELL, CHECK_CELL * 2);
+  ctx.moveTo(0, CHECK_CELL);
+  ctx.lineTo(CHECK_CELL * 2, CHECK_CELL);
+  ctx.stroke();
+
+  pmremGenerator.dispose();
+  renderer.dispose();
+  return out.toDataURL('image/png');
+}
+
+/** Image 2×2 (biais, dessus, face, côté) pour l'auto-contrôle de l'IA. */
+export const generateCheckImage = async (
+  stl: Blob,
+  off: Blob | null,
+): Promise<string> => {
+  const scene = new THREE.Scene();
+  const group = off
+    ? buildColoredGroupFromOff(await off.text(), 0x00a6ff)
+    : null;
+  if (group) {
+    const rotated = new THREE.Group();
+    rotated.rotation.x = -Math.PI / 2;
+    const b = new THREE.Box3().setFromObject(group);
+    if (!b.isEmpty()) group.position.sub(b.getCenter(new THREE.Vector3()));
+    rotated.add(group);
+    scene.add(rotated);
+  } else {
+    const geometry = new STLLoader().parse(await stl.arrayBuffer());
+    geometry.rotateX(-Math.PI / 2);
+    geometry.center();
+    geometry.computeVertexNormals();
+    scene.add(
+      new THREE.Mesh(
+        geometry,
+        new THREE.MeshStandardMaterial({
+          color: 0x00a6ff,
+          metalness: 0.2,
+          roughness: 0.5,
+        }),
+      ),
+    );
+  }
+  return renderCheckViews(scene);
+};

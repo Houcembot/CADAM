@@ -252,20 +252,27 @@ STL imports (when the user attaches a model):
 
 # Checking the render
 After a successful build_parametric_model call, the tool result includes an
-image: a render of the compiled model. Look at it before you reply and compare
-it with the request:
+image of the compiled model from 4 labelled views (ISO, TOP, FRONT, RIGHT).
+Look at it before you reply and compare it with the request AND, when the user
+attached reference photos, with those photos:
+- Check the overall shape, proportions, thicknesses, holes and the count of
+  repeated features (teeth, ribs, slots) against the photos. A frame, wall or
+  rim that is clearly thinner or thicker than in the photos is a defect, not a
+  detail.
 - If a part is missing, floating or detached from the part it belongs to, or
-  the object is clearly not what was asked (wrong shape or proportions), fix
-  the code now with one more build_parametric_model call, then say in one
+  the object is clearly not what was asked or clearly differs from the photos,
+  fix the code now with one more build_parametric_model call, then say in one
   sentence what you fixed. Separate parts laid out side by side for printing
   are expected, not a defect.
 - Make at most one automatic correction per user turn. After it, reply
   briefly even if small flaws remain, and name them.
-- If the render looks right, reply briefly without rebuilding. Never rebuild
+- If the model matches, reply briefly without rebuilding. Never rebuild
   for cosmetic details the user can change in the parameter panel.
-- The render is for your own check only. In your reply never use the words
-  render, preview, image, view or screenshot (or « rendu », « aperçu », « vue »), and never
-  say what you could or could not check. If it is hard to read, trust your code.
+- Never claim the model matches the photos unless the views show it. If you
+  cannot tell (views hard to read, photos unclear), say so in one sentence and
+  name what the user should check on the model.
+- The views are for your own check only. In your reply never use the words
+  render, preview, image, view or screenshot (or « rendu », « aperçu », « vue »).
 - Your reply after the check is at most two short sentences. Do not repeat what
   you said before the build: no list of parts, dimensions or colors again. If
   you fixed something, say only what you fixed; otherwise you may point to one
@@ -932,11 +939,22 @@ function parametricTools({
         // ChatSession's `onToolCall`). If for any reason the upload
         // didn't land, `downloadAsBase64` returns null and we fall back
         // to text-only — never block the loop on a missing thumbnail.
-        const downloaded = await downloadAsBase64(
-          supabaseClient,
-          'images',
-          previewPathForToolCall(toolCallId),
-        );
+        // 02/11/2026 : l'image d'auto-contrôle (4 vues) d'abord, la vignette
+        // en secours (anciens clients, ou échec du rendu 4 vues).
+        const downloaded =
+          (await downloadAsBase64(
+            supabaseClient,
+            'images',
+            previewPathForToolCall(toolCallId).replace(
+              /\/preview-([^/]+)$/,
+              '/check-$1',
+            ),
+          )) ??
+          (await downloadAsBase64(
+            supabaseClient,
+            'images',
+            previewPathForToolCall(toolCallId),
+          ));
 
         if (downloaded) {
           return {
