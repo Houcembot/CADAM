@@ -46,6 +46,14 @@ describe('prompt cadam — questions de clarification', () => {
     assert.match(prompt, /say so in your reply/i);
   });
 
+  // 02/11/2026 : roue dentée, le texte disait 10 dents et la photo en montrait
+  // 40 ; le modèle a suivi le texte et n'a signalé l'écart qu'en une phrase.
+  it('pose une question quand le texte contredit les photos jointes', () => {
+    assert.match(prompt, /attached photos contradict each other/i);
+    assert.match(prompt, /photo's values as the default/i);
+    assert.match(prompt, /does not contradict the attached photos/i);
+  });
+
   it("l'outil answer_user annonce la question de clarification", () => {
     assert.match(tools, /clarifying question/i);
   });
