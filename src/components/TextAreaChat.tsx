@@ -1595,6 +1595,8 @@ function TextAreaChat({
                     e.stopPropagation();
                     const input = document.createElement('input');
                     input.type = 'file';
+                    // Sélection par lot (galerie mobile incluse) : addItems gère déjà N fichiers
+                    input.multiple = true;
                     input.accept = `${VALID_IMAGE_FORMATS.join(', ')}, ${
                       type === 'creative'
                         ? SUPPORTED_MESH_EXTENSIONS.join(', ')
