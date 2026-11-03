@@ -56,6 +56,15 @@ export default defineConfig({
     nitro({
       baseURL: normalizedAppBase,
       inlineDynamicImports: true,
+      // Audit sécurité 03/11/2026 : seul clic3d.tn peut intégrer l'outil en iframe.
+      routeRules: {
+        '/**': {
+          headers: {
+            'Content-Security-Policy':
+              "frame-ancestors 'self' https://clic3d.tn https://www.clic3d.tn http://localhost:3000",
+          },
+        },
+      },
     }),
     react(),
     sentryVitePlugin({
