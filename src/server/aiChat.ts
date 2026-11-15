@@ -34,6 +34,7 @@ import {
   Output,
   smoothStream,
   stepCountIs,
+  hasToolCall,
   streamText,
   type LanguageModel,
   type LanguageModelUsage,
@@ -1286,7 +1287,10 @@ export async function handleAiChatRequest(req: Request) {
             toolChoice: firstStepToolChoice(actualModelId),
           }
         : {},
-    stopWhen: stepCountIs(5),
+    // 15/11/2026 : une question (answer_user) termine le tour. Sans cet arrêt,
+    // le serveur relançait le modèle et Sonnet construisait quand même une
+    // pièce sans attendre la réponse du client (tour alors débité).
+    stopWhen: [stepCountIs(5), hasToolCall('answer_user')],
     maxOutputTokens: maxOutputTokensFor(
       actualModelId,
       rawBody.thinking ?? false,

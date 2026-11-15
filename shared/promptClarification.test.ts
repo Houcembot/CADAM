@@ -69,4 +69,13 @@ describe('prompt cadam — questions de clarification', () => {
   it("l'outil answer_user annonce la question de clarification", () => {
     assert.match(tools, /clarifying question/i);
   });
+
+  // 15/11/2026 (test en prod) : « fais-moi une clé » → question, puis le serveur
+  // relançait le modèle qui construisait sans attendre la réponse.
+  it('une question (answer_user) termine le tour côté serveur', () => {
+    assert.match(
+      src,
+      /stopWhen: \[stepCountIs\(5\), hasToolCall\('answer_user'\)\]/,
+    );
+  });
 });
