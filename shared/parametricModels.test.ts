@@ -5,8 +5,6 @@ import {
   firstStepToolChoice,
   maxOutputTokensFor,
   PRIMARY_PARAMETRIC_MODEL,
-  FALLBACK_PARAMETRIC_MODEL,
-  openRouterModelsFor,
   resolveChatModel,
 } from './parametricModels.ts';
 
@@ -17,37 +15,21 @@ describe('modèles paramétriques', () => {
   it('Claude Sonnet 4.5 est le modèle principal', () => {
     assert.equal(PRIMARY_PARAMETRIC_MODEL, 'anthropic/claude-sonnet-5.5');
   });
-
-  it('GPT-5.6 Sol est le secours, chez un autre fournisseur', () => {
-    assert.equal(FALLBACK_PARAMETRIC_MODEL, 'openai/gpt-5.6-sol');
-  });
-
-  it('le principal bascule sur le secours en cas d’erreur', () => {
-    assert.deepEqual(openRouterModelsFor(PRIMARY_PARAMETRIC_MODEL), [
-      'anthropic/claude-sonnet-5.5',
-      'openai/gpt-5.6-sol',
-    ]);
-  });
-
-  it('le secours choisi à la main rebascule sur le principal', () => {
-    assert.deepEqual(openRouterModelsFor(FALLBACK_PARAMETRIC_MODEL), [
-      'openai/gpt-5.6-sol',
-      'anthropic/claude-sonnet-5.5',
-    ]);
-  });
-
-  it('aucune liste de secours pour un autre modèle', () => {
-    assert.equal(openRouterModelsFor('anthropic/claude-sonnet-5'), undefined);
-  });
 });
 
 describe('modèle imposé côté serveur', () => {
-  it('accepte les deux modèles autorisés', () => {
+  it('accepte Sonnet 5.5, seul modèle autorisé', () => {
     assert.equal(
       resolveChatModel('anthropic/claude-sonnet-5.5'),
       'anthropic/claude-sonnet-5.5',
     );
-    assert.equal(resolveChatModel('openai/gpt-5.6-sol'), 'openai/gpt-5.6-sol');
+  });
+
+  it('GPT-5.6 Sol (retiré le 15/11/2026) retombe sur Sonnet 5.5', () => {
+    assert.equal(
+      resolveChatModel('openai/gpt-5.6-sol'),
+      'anthropic/claude-sonnet-5.5',
+    );
   });
 
   it('remplace tout autre modèle demandé par le navigateur par le principal', () => {
@@ -91,7 +73,10 @@ describe('choix d’outil au premier tour', () => {
 // sortie (0,17 $ perdus, client remboursé).
 describe('place laissée à la réponse', () => {
   it('Claude a de quoi réfléchir puis écrire la pièce', () => {
-    assert.equal(maxOutputTokensFor('anthropic/claude-sonnet-5.5', false), 32000);
+    assert.equal(
+      maxOutputTokensFor('anthropic/claude-sonnet-5.5', false),
+      32000,
+    );
   });
 
   it('les autres modèles gardent leurs limites', () => {

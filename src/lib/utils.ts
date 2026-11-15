@@ -2,10 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Parameter } from '@shared/types';
 import { ModelConfig } from '../types/misc.ts';
-import {
-  PRIMARY_PARAMETRIC_MODEL,
-  FALLBACK_PARAMETRIC_MODEL,
-} from '@shared/parametricModels';
+import { PRIMARY_PARAMETRIC_MODEL } from '@shared/parametricModels';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -243,23 +240,12 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
   // clic3d-cadam: PREMIUM-ONLY. Toute génération coûte 20 crédits (gate dans
   // server/aiChat.ts). Choix du 08/10/2026 sur banc d'essai (voir
   // shared/parametricModels.ts) : Claude Sonnet 5.5 par défaut (index 0, depuis le 11/10/2026),
-  // GPT-5.6 Sol en secours automatique chez un autre fournisseur. Sonnet 5
-  // et Gemini sont retirés.
+  // Seul modèle depuis le 15/11/2026 (GPT-5.6 Sol retiré : pas de choix).
   {
     id: PRIMARY_PARAMETRIC_MODEL,
     name: 'Claude Sonnet 5.5 (premium)',
     description: 'Anthropic Claude Sonnet 5.5 — rapide et fiable en CAO (paid)',
     provider: 'Anthropic',
-    supportsTools: true,
-    supportsThinking: true,
-    supportsVision: true,
-  },
-  {
-    id: FALLBACK_PARAMETRIC_MODEL,
-    name: 'GPT-5.6 Sol (premium)',
-    description:
-      'OpenAI GPT-5.6 Sol via OpenRouter — second fournisseur, secours automatique (paid)',
-    provider: 'OpenAI',
     supportsTools: true,
     supportsThinking: true,
     supportsVision: true,

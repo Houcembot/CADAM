@@ -1,5 +1,4 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import type { LanguageModelV3 } from '@ai-sdk/provider';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { pickOpenRouterKey, reportOpenRouterFailure } from './openrouterPool';
@@ -18,7 +17,6 @@ import { imageIdFromFilename, imageStoragePath } from '@shared/imageRefs';
 import { normalizeConversationSuggestions } from '@shared/suggestions';
 import {
   PRIMARY_PARAMETRIC_MODEL,
-  openRouterModelsFor,
   resolveChatModel,
   directAnthropicModelId,
   firstStepToolChoice,
@@ -397,60 +395,11 @@ function providerFor(modelId: string): ChatProvider {
   // Gemini Flash-Lite free tier). All other IDs (including OpenRouter-
   // hosted `google/gemma-*:free`) keep going through OpenRouter.
   if (modelId.startsWith('google-direct/')) return 'google';
-  // clic3d : les modèles Claude passent en direct par l'API Anthropic quand
-  // la clé est posée (OpenRouter reste le secours, voir buildChatModel).
-  if (modelId.startsWith('anthropic/') && process.env.ANTHROPIC_API_KEY)
-    return 'anthropic';
+  // clic3d : les modèles Claude passent toujours en direct par l'API
+  // Anthropic (15/11/2026 : plus de secours OpenRouter ; clé absente = erreur
+  // claire dans les logs au lieu d'une bascule silencieuse).
+  if (modelId.startsWith('anthropic/')) return 'anthropic';
   return 'openrouter';
-}
-
-/**
- * Essaie le modèle principal ; si l'appel échoue avant le premier octet
- * (panne, limite de débit, clé refusée), rejoue la même requête sur le
- * secours. Une erreur au milieu du flux n'est pas rejouée : le client a
- * déjà reçu du texte.
- */
-function withFallback(
-  primary: LanguageModel,
-  fallback: LanguageModel,
-): LanguageModel {
-  const p = primary as unknown as LanguageModelV3;
-  const f = fallback as unknown as LanguageModelV3;
-  // Objet explicite : les modèles du SDK sont des classes dont `provider` et
-  // `supportedUrls` sont des accesseurs, perdus par une simple copie `...p`.
-  const model: LanguageModelV3 = {
-    specificationVersion: 'v3',
-    provider: p.provider,
-    modelId: p.modelId,
-    get supportedUrls() {
-      return p.supportedUrls;
-    },
-    doGenerate: async (options) => {
-      try {
-        return await p.doGenerate(options);
-      } catch (error) {
-        if (options.abortSignal?.aborted) throw error;
-        console.error(
-          '[clic3d] anthropic direct en échec, secours OpenRouter :',
-          error instanceof Error ? error.message : error,
-        );
-        return f.doGenerate(options);
-      }
-    },
-    doStream: async (options) => {
-      try {
-        return await p.doStream(options);
-      } catch (error) {
-        if (options.abortSignal?.aborted) throw error;
-        console.error(
-          '[clic3d] anthropic direct en échec, secours OpenRouter :',
-          error instanceof Error ? error.message : error,
-        );
-        return f.doStream(options);
-      }
-    },
-  };
-  return model;
 }
 
 type AnthropicProvider = ReturnType<typeof createAnthropic>;
@@ -532,12 +481,8 @@ function buildChatModel(
     };
   }
   if (provider === 'anthropic') {
-    const fallback = buildOpenRouterChatModel(modelId, providers, thinking);
     return {
-      model: withFallback(
-        providers.anthropic()(directAnthropicModelId(modelId)),
-        fallback.model,
-      ),
+      model: providers.anthropic()(directAnthropicModelId(modelId)),
       // Effort explicite : Sonnet 5.5 refuse le budget de réflexion fixe et, à
       // l'effort par défaut (high), ne livre rien sur les objets complexes.
       providerOptions: { anthropic: { effort: effortFor(modelId, thinking) } },
@@ -554,12 +499,8 @@ function buildOpenRouterChatModel(
   // Everything else goes through OpenRouter. OpenRouter accepts the same
   // model IDs CADAM uses (e.g. "anthropic/claude-opus-4.8",
   // "google/gemini-3.1-pro-preview", "google/gemma-4-31b-it:free").
-  // Liste de secours : si le modèle principal échoue, OpenRouter rejoue la
-  // requête sur le suivant (voir shared/parametricModels.ts).
-  const models = openRouterModelsFor(modelId);
   return {
     model: providers.openrouter().chat(modelId, {
-      ...(models ? { models } : {}),
       ...(thinking
         ? { reasoning: { max_tokens: THINKING_BUDGET_TOKENS } }
         : {}),
@@ -733,7 +674,7 @@ async function loadBranchFromDb({
 }
 
 async function generateConversationTitle({
-  anthropic: _anthropic,
+  anthropic,
   firstMessage,
 }: {
   anthropic: AnthropicProvider;
@@ -742,9 +683,7 @@ async function generateConversationTitle({
   const text = getParametricText(firstMessage.parts) || 'New conversation';
   try {
     const result = await generateText({
-      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat(
-        'anthropic/claude-haiku-4.5',
-      ),
+      model: anthropic('claude-haiku-4-5'),
       system:
         'Generate a short title for a 3D creation conversation. Return only the title.',
       prompt: text,
@@ -767,7 +706,7 @@ async function generateConversationTitle({
  * specific assistant turn.
  */
 async function generateConversationSuggestions({
-  anthropic: _anthropic,
+  anthropic,
   branch,
   conversationType,
 }: {
@@ -789,9 +728,7 @@ async function generateConversationSuggestions({
   const summary = `User request: ${firstUserText.slice(0, 400)}\n\nMost recent assistant reply: ${lastAssistantText.slice(0, 400)}`;
   try {
     const result = await generateText({
-      model: createOpenRouter({ apiKey: pickOpenRouterKey() }).chat(
-        'anthropic/claude-haiku-4.5',
-      ),
+      model: anthropic('claude-haiku-4-5'),
       system:
         conversationType === 'creative'
           ? 'Given a 3D mesh design conversation, return an array of exactly 2 follow-up prompts the user might want to send next. Each prompt is a concise instruction of 3 words or fewer, not a question. Return exactly 2 items — no more, no fewer.'

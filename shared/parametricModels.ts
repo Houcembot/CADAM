@@ -11,28 +11,10 @@
 // (une pièce non compilée, deux aux mauvaises dimensions).
 
 export const PRIMARY_PARAMETRIC_MODEL = 'anthropic/claude-sonnet-5.5';
-export const FALLBACK_PARAMETRIC_MODEL = 'openai/gpt-5.6-sol';
+// 15/11/2026 : Sonnet 5.5 seul, en direct sur l'API Anthropic. GPT-5.6 Sol et
+// le secours OpenRouter sont retirés (plus de choix de modèle dans la fenêtre).
 
-/**
- * Liste `models` envoyée à OpenRouter : si le premier modèle renvoie une
- * erreur (panne, saturation, limite de débit), OpenRouter rejoue la même
- * requête sur le suivant. Les deux modèles se servent mutuellement de
- * secours ; tout autre modèle part seul.
- */
-export function openRouterModelsFor(modelId: string): string[] | undefined {
-  if (modelId === PRIMARY_PARAMETRIC_MODEL) {
-    return [PRIMARY_PARAMETRIC_MODEL, FALLBACK_PARAMETRIC_MODEL];
-  }
-  if (modelId === FALLBACK_PARAMETRIC_MODEL) {
-    return [FALLBACK_PARAMETRIC_MODEL, PRIMARY_PARAMETRIC_MODEL];
-  }
-  return undefined;
-}
-
-const ALLOWED_CHAT_MODELS = new Set([
-  PRIMARY_PARAMETRIC_MODEL,
-  FALLBACK_PARAMETRIC_MODEL,
-]);
+const ALLOWED_CHAT_MODELS = new Set([PRIMARY_PARAMETRIC_MODEL]);
 
 /**
  * Le modèle vient du navigateur : sans ce filtre, n'importe qui pourrait
