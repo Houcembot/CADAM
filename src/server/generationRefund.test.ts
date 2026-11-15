@@ -46,9 +46,30 @@ describe('remboursement du tour initial', () => {
     );
   });
 
-  it('ne rembourse pas une réponse texte sans outil', () => {
+  // 15/11/2026 : les questions sont gratuites, seul un modèle produit est payé.
+  it('rembourse une question posée en texte, sans modèle produit', () => {
     assert.equal(
       shouldRefundGeneration([texte('Il me faut les dimensions')]),
+      true,
+    );
+  });
+
+  it('rembourse une question posée avec answer_user', () => {
+    assert.equal(
+      shouldRefundGeneration([
+        { type: 'reasoning', text: 'réflexion' },
+        { type: 'tool-answer_user', state: 'output-available' },
+      ]),
+      true,
+    );
+  });
+
+  it('ne rembourse pas un modèle produit après une phrase', () => {
+    assert.equal(
+      shouldRefundGeneration([
+        texte('Je construis la clé'),
+        { type: 'tool-build_parametric_model', state: 'input-available' },
+      ]),
       false,
     );
   });

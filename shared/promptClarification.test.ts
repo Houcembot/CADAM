@@ -30,9 +30,21 @@ describe('prompt cadam — questions de clarification', () => {
     assert.match(prompt, /always include a default/i);
   });
 
-  it('au plus 3 questions, puis construit avec les valeurs par défaut', () => {
-    assert.match(prompt, /at most 3 clarifying questions/i);
-    assert.match(prompt, /after the third/i);
+  // 15/11/2026 (décision Houcem) : plus de plafond de 3 questions ; l'IA
+  // demande tout ce qu'il faut (questions gratuites), jusqu'au « go » du client.
+  it('pose autant de questions que nécessaire, jusqu’au feu vert du client', () => {
+    assert.doesNotMatch(prompt, /at most 3 clarifying questions/i);
+    assert.match(prompt, /as many clarifying questions as you need/i);
+    assert.match(prompt, /says to go ahead/i);
+  });
+
+  // 15/11/2026 : clé copiée d'une photo, dents remplacées par 2 encoches
+  // inventées. L'IA doit raisonner sur la fonction et reproduire (ou demander)
+  // les éléments qui font marcher l'objet.
+  it('raisonne sur la fonction et reproduit les éléments fonctionnels de la photo', () => {
+    assert.match(prompt, /Function first/);
+    assert.match(prompt, /Never replace them with generic/);
+    assert.match(prompt, /ask for what you need before building/);
   });
 
   it('signale les demandes hors domaine (figurines) et propose une version simplifiée', () => {

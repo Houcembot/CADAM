@@ -75,7 +75,7 @@ describe('place laissée à la réponse', () => {
   it('Claude a de quoi réfléchir puis écrire la pièce', () => {
     assert.equal(
       maxOutputTokensFor('anthropic/claude-sonnet-5.5', false),
-      32000,
+      64000,
     );
   });
 

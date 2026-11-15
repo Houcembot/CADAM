@@ -52,7 +52,7 @@ export function firstStepToolChoice(modelId: string): 'auto' | 'required' {
  * juste à la vitesse.
  */
 export function maxOutputTokensFor(modelId: string, thinking: boolean): number {
-  if (modelId.startsWith('anthropic/')) return 32000;
+  if (modelId.startsWith('anthropic/')) return 64000;
   return thinking ? 20000 : 16000;
 }
 
@@ -62,13 +62,15 @@ export function maxOutputTokensFor(modelId: string, thinking: boolean): number {
  * sur un objet complexe, remplit le plafond de sortie de réflexion sans livrer
  * de code (banc du 17/10/2026). « low » livre en 10-50 s ; l'option réflexion
  * passe à « medium ». Le budget fixe (thinking.enabled) est refusé par ce modèle.
+ * 15/11/2026 (décision Houcem, campagne de test) : toujours « high » — la
+ * fidélité prime sur la vitesse ; plafond de sortie relevé à 64 000 en échange.
  */
 export function effortFor(
   modelId: string,
-  thinking: boolean,
-): 'low' | 'medium' | undefined {
+  _thinking: boolean,
+): 'high' | undefined {
   if (!modelId.startsWith('anthropic/')) return undefined;
-  return thinking ? 'medium' : 'low';
+  return 'high';
 }
 
 /** Prix d'une génération en tokens clic3d : 20, ou 30 avec photos jointes (17/10/2026). */
