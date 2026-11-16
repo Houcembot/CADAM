@@ -491,7 +491,14 @@ function buildChatModel(
       model: providers.anthropic()(directAnthropicModelId(modelId)),
       // Effort explicite : Sonnet 5.5 refuse le budget de réflexion fixe et, à
       // l'effort par défaut (high), ne livre rien sur les objets complexes.
-      providerOptions: { anthropic: { effort: effortFor(modelId, thinking) } },
+      // disableParallelToolUse : une question et une construction ne doivent
+      // jamais partir dans la même étape (vu en prod le 16/11).
+      providerOptions: {
+        anthropic: {
+          effort: effortFor(modelId, thinking),
+          disableParallelToolUse: true,
+        },
+      },
     };
   }
   return buildOpenRouterChatModel(modelId, providers, thinking);

@@ -1,3 +1,4 @@
+import { shouldAutoContinue } from '@shared/autoContinue';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { SuggestionPills } from '@/components/chat/SuggestionPills';
 import TextAreaChat from '@/components/TextAreaChat';
@@ -394,7 +395,9 @@ export function ChatSession({
     messages: initialBranch,
     transport,
     onToolCall: handleToolCall,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    // Pas de relance après une question de l'IA (voir shared/autoContinue.ts).
+    sendAutomaticallyWhen: ({ messages }) =>
+      shouldAutoContinue(messages, lastAssistantMessageIsCompleteWithToolCalls),
     // Out-of-band conversation-level signals (title + suggestions) arrive
     // here as transient data parts — they never land in `messages.parts`,
     // so we patch the conversation query cache directly. See
